@@ -1,0 +1,91 @@
+# ==============================================================================
+# Unity 工程 .gitignore (Unity 2022.3 LTS / URP)
+# 说明：只忽略「机器生成、可重新生成、本机私有」的内容；
+#       Assets/ 与 Packages/ 下的 .meta 文件必须提交，否则会丢引用。
+# ==============================================================================
+
+# ---------------------------- Unity 生成的目录 ----------------------------
+# 导入缓存、编译产物、临时文件：体积大且完全可重建
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+# Unity 崩溃时产生的内存快照，体积大且可能含敏感数据
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# ---------------------------- Unity 生成的根级文件 ----------------------------
+# 崩溃信息
+sysinfo.txt
+# 未使用的资源回收信息
+/[Aa]ssets/[Aa]ssetStoreTools*
+# Rider / JetBrains 自动注入的插件
+/[Aa]ssets/Plugins/Editor/JetBrains*
+
+# 资源商店导入记录（本机路径，与项目无关）
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+# Addressables 打包产物（*.bin 为二进制数据）
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+
+# ---------------------------- 生成的工程/解决方案文件 ----------------------------
+# 由 Unity 依据 Unity 版本重新生成，提交会互相覆盖
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+*.DotSettings.user
+
+# 可视化编辑器缓存
+.vs/
+.vsconfig.user
+.gradle/
+ExportedObj/
+.consulo/
+.idea/
+# Rider 本地设置
+.idea/**/workspace.xml
+.idea/**/usage.statistics.xml
+.idea/**/shelf/
+
+# ---------------------------- 构建产物 ----------------------------
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.ipa
+crashlytics-build.properties
+
+# ---------------------------- Blender / 建模临时文件 ----------------------------
+*.blend1
+*.blend2
+
+# ---------------------------- 操作系统垃圾文件 ----------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+*.lnk
+
+# ---------------------------- 日志与调试输出 ----------------------------
+*.log
+
+# ---------------------------- 例外：必须提交的文件 ----------------------------
+# 只有与「被忽略资源」同名的 .meta 才应忽略；其余 .meta 必须入库
+!/[Aa]ssets/**/*.meta

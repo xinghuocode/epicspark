@@ -1,0 +1,88 @@
+# ==============================================================================
+# Unity 工程 .gitattributes
+# 目的：统一换行符，明确二进制资源，避免 Git 误判而损坏资源。
+# ==============================================================================
+
+# 默认按内容自动识别文本文件，文本统一以 LF 存储
+* text=auto
+
+# ---------------------------- Unity 序列化文件（YAML 文本） ----------------------------
+# 这些文件是纯文本，按文本处理才能正常 diff / 合并
+*.meta        text
+*.asset       text
+*.unity       text
+*.prefab      text
+*.mat         text
+*.anim        text
+*.controller  text
+*.overrideController text
+*.mask        text
+*.physicMaterial text
+*.physicsMaterial2D text
+*.preset      text
+*.renderTexture text
+*.spriteatlas text
+*.terrainlayer text
+*.lighting    text
+*.signal      text
+*.playable    text
+*.mixer       text
+*.index       text
+*.guiskin     text
+*.shadervariants text
+*.shader      text
+*.shadergraph text
+*.shadersubgraph text
+*.compute     text
+*.cginc       text
+*.hlsl        text
+*.json        text
+*.asmdef      text
+*.asmref      text
+
+# C# / 配置文件按对应语言做 diff
+*.cs          text diff=csharp
+*.yml         text
+*.yaml        text
+*.md          text
+
+# ---------------------------- 二进制资源 ----------------------------
+# 声明为二进制，禁止换行符转换与文本 diff，防止资源被破坏
+*.png         binary
+*.jpg         binary
+*.jpeg        binary
+*.gif         binary
+*.bmp         binary
+*.tga         binary
+*.psd         binary
+*.tif         binary
+*.tiff        binary
+*.exr         binary
+*.hdr         binary
+*.iff         binary
+*.fbx         binary
+*.obj         binary
+*.dae         binary
+*.3ds         binary
+*.blend       binary
+*.max         binary
+*.ma          binary
+*.mb          binary
+*.wav         binary
+*.mp3         binary
+*.ogg         binary
+*.aif         binary
+*.aiff        binary
+*.flac        binary
+*.ttf         binary
+*.otf         binary
+*.dll         binary
+*.so          binary
+*.dylib       binary
+*.bundle      binary
+*.a           binary
+*.lib         binary
+*.zip         binary
+*.7z          binary
+*.gz          binary
+*.unitypackage binary
