@@ -1,0 +1,9 @@
+{
+    "name": "EpicSpark.AI",
+    "rootNamespace": "EpicSpark.AI",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}

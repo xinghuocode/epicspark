@@ -1,0 +1,13 @@
+{
+    "name": "EpicSpark.AI.Editor",
+    "rootNamespace": "EpicSpark.AI.EditorTools",
+    "references": [
+        "EpicSpark.AI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}
