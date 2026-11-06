@@ -1,0 +1,18 @@
+{
+    "scene": "Assets/Scenes/BlenderStarTemple_URP.unity",
+    "pipeline": "URP-HighFidelity",
+    "bounds": "(36.400, 20.987, 36.400)",
+    "urpActive": true,
+    "hasBloom": true,
+    "passed": true,
+    "renderers": 614,
+    "lights": 17,
+    "realtimeLights": 17,
+    "cameras": 4,
+    "starMeshes": 72,
+    "meshColliders": 70,
+    "uniqueMeshes": 613,
+    "uniqueTriangles": 657214,
+    "nullMaterialSlots": 0,
+    "missingScripts": 0
+}

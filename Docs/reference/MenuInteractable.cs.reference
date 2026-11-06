@@ -1,0 +1,116 @@
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace SparkCode
+{
+    public class MenuInteractable : MonoBehaviour
+    {
+        public StartMenuController menu;
+        public MenuAction action;
+        public Transform visual;
+        public CanvasGroup group;
+        public Transform halo;
+        public Light hoverLight;
+        public Text mainLabel;
+        public Text subLabel;
+        public Image frame;
+        public Color frameNormal = new Color(0.78f, 0.58f, 0.24f, 0.9f);
+        public Color frameHover = new Color(1f, 0.85f, 0.45f, 1f);
+        public Color labelNormal = new Color(0.94f, 0.89f, 0.76f, 1f);
+        public Color labelHover = new Color(1f, 0.96f, 0.84f, 1f);
+        public float hoverScale = 1.1f;
+        public float hoverLightIntensity = 2.4f;
+        public float haloSpin = 24f;
+        public float appearDelay;
+        public float appearDuration = 1f;
+
+        Vector3 _baseScale;
+        float _hover;
+        float _appearStart;
+        float _pulse;
+
+        void Awake()
+        {
+            _baseScale = visual != null ? visual.localScale : Vector3.one;
+            _appearStart = Time.time;
+        }
+
+        void Update()
+        {
+            float appear = Mathf.Clamp01((Time.time - _appearStart - appearDelay) / Mathf.Max(0.01f, appearDuration));
+            float intro = appear * appear * (3f - 2f * appear);
+
+            bool canHover = menu == null || menu.CanInteract;
+            float targetHover = canHover ? _hover : 0f;
+            if (canHover)
+            {
+                _hover = Mathf.MoveTowards(_hover, _isHovering ? 1f : 0f, Time.deltaTime * 8f);
+            }
+            else
+            {
+                _hover = Mathf.MoveTowards(_hover, 0f, Time.deltaTime * 8f);
+            }
+            targetHover = _hover;
+            _pulse = Mathf.MoveTowards(_pulse, 0f, Time.deltaTime * 3.5f);
+
+            float eased = targetHover * targetHover * (3f - 2f * targetHover);
+            float scale = Mathf.Lerp(0.0001f, 1f, intro) * Mathf.Lerp(1f, hoverScale, eased) * (1f + _pulse * 0.08f);
+            if (visual != null)
+            {
+                visual.localScale = _baseScale * scale;
+            }
+
+            if (group != null)
+            {
+                group.alpha = intro;
+                group.blocksRaycasts = intro > 0.4f;
+            }
+
+            if (frame != null)
+            {
+                frame.color = Color.Lerp(frameNormal, frameHover, eased);
+            }
+            if (mainLabel != null)
+            {
+                mainLabel.color = Color.Lerp(labelNormal, labelHover, eased);
+            }
+            if (subLabel != null)
+            {
+                subLabel.color = Color.Lerp(new Color(labelNormal.r, labelNormal.g, labelNormal.b, 0.65f), new Color(labelHover.r, labelHover.g, labelHover.b, 0.95f), eased);
+            }
+            if (hoverLight != null)
+            {
+                hoverLight.intensity = hoverLightIntensity * eased * intro;
+            }
+            if (halo != null)
+            {
+                halo.Rotate(0f, 0f, haloSpin * Time.deltaTime, Space.Self);
+            }
+        }
+
+        bool _isHovering;
+
+        void OnMouseEnter()
+        {
+            _isHovering = true;
+            if (menu != null) menu.OnItemHover(this, true);
+        }
+
+        void OnMouseExit()
+        {
+            _isHovering = false;
+        }
+
+        void OnDisable()
+        {
+            _isHovering = false;
+        }
+
+        void OnMouseDown()
+        {
+            if (menu == null || !menu.CanInteract) return;
+            _pulse = 1f;
+            menu.Select(action);
+        }
+    }
+}

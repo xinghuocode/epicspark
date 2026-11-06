@@ -1,0 +1,60 @@
+{
+  "scene": "Assets/Scenes/BlenderStarTemple_URP.unity",
+  "pipeline": "URP-HighFidelity",
+  "images": [
+    {
+      "file": "BlenderStarTemple_Hero.png",
+      "size": [
+        1600,
+        1200
+      ],
+      "mean": [
+        63.8,
+        56.68,
+        48.92
+      ],
+      "bytes": 2305422
+    },
+    {
+      "file": "BlenderStarTemple_Oculus.png",
+      "size": [
+        1600,
+        1200
+      ],
+      "mean": [
+        78.2,
+        63.8,
+        49.42
+      ],
+      "bytes": 2333782
+    },
+    {
+      "file": "BlenderStarTemple_Star.png",
+      "size": [
+        1440,
+        1440
+      ],
+      "mean": [
+        69.39,
+        55.19,
+        42.56
+      ],
+      "bytes": 2174223
+    },
+    {
+      "file": "BlenderStarTemple_Aisle.png",
+      "size": [
+        1600,
+        1120
+      ],
+      "mean": [
+        55.19,
+        50.99,
+        49.73
+      ],
+      "bytes": 1680439
+    }
+  ],
+  "fbx_bytes": 13811116,
+  "scene_sha256": "990222634559d084d41fffed3511b90372cea3b42dfb01977a6caacadc68a5c0"
+}

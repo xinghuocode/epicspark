@@ -1,0 +1,5519 @@
+{
+  "fbx": "D:\\unityproject\\epic\\Assets\\Art\\Models\\BlenderStarTemple.fbx",
+  "source_blend": "D:\\dshproject\\starttemple\\output\\星火神殿.blend",
+  "objects": [
+    {
+      "name": "Continuous structural foundation",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "JOINTS | warm graphite"
+      ],
+      "vertices": 384,
+      "polygons": 194
+    },
+    {
+      "name": "Circular walkable foundation",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "FLOOR | honed ivory limestone"
+      ],
+      "vertices": 384,
+      "polygons": 194
+    },
+    {
+      "name": "Outer ambulatory structural deck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "FLOOR | honed ivory limestone"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Individually jointed radial ambulatory paving",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "FLOOR | honed ivory limestone",
+        "FLOOR | honed ivory limestone",
+        "FLOOR | honed ivory limestone",
+        "FLOOR | pale silver stone"
+      ],
+      "vertices": 23552,
+      "polygons": 23040
+    },
+    {
+      "name": "Wide outer colonnade — continuous walkable ring",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "FLOOR | honed ivory limestone",
+        "FLOOR | honed ivory limestone",
+        "FLOOR | pale silver stone"
+      ],
+      "vertices": 23552,
+      "polygons": 23040
+    },
+    {
+      "name": "Column 01 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 01 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 01 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 01 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 01 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 01 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 01 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 01 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 01 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 02 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 02 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 02 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 02 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 02 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 02 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 02 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 02 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 02 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 03 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 03 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 03 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 03 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 03 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 03 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 03 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 03 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 03 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 04 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 04 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 04 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 04 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 04 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 04 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 04 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 04 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 04 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 05 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 05 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 05 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 05 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 05 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 05 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 05 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 05 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 05 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 06 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 06 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 06 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 06 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 06 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 06 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 06 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 06 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 06 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 07 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 07 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 07 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 07 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 07 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 07 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 07 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 07 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 07 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 08 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 08 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 08 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 08 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 08 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 08 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 08 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 08 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 08 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 09 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 09 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 09 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 09 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 09 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 09 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 09 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 09 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 09 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 10 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 10 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 10 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 10 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 10 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 10 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 10 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 10 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 10 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 11 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 11 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 11 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 11 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 11 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 11 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 11 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 11 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 11 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 12 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 12 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 12 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 12 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 12 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 12 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 12 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 12 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 12 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 13 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 13 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 13 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 13 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 13 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 13 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 13 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 13 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 13 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 14 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 14 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 14 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 14 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 14 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 14 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 14 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 14 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 14 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 15 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 15 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 15 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 15 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 15 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 15 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 15 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 15 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 15 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 16 | square plinth",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 16 | base scotia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 16 | lower torus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 768
+    },
+    {
+      "name": "Column 16 | base neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 16 | twenty-flute tapered shaft",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1760,
+      "polygons": 1602
+    },
+    {
+      "name": "Column 16 | capital neck",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 16 | carved echinus",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 768,
+      "polygons": 674
+    },
+    {
+      "name": "Column 16 | abacus lower",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Column 16 | abacus crown",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Architrave lower fascia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Architrave shadow reveal",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Architrave middle fascia",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Continuous frieze",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Projecting corona cornice",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Staggered ashlar drum — outer sanctuary wall",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "CALACATTA | warm white procedural marble",
+        "CALACATTA | warm white procedural marble",
+        "CALACATTA | warm white procedural marble",
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 35328,
+      "polygons": 34560
+    },
+    {
+      "name": "Outer wall base course",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Outer wall upper cornice",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Covered outer ambulatory roof",
+      "collection": "01 | Marble Architecture",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Dome springing course",
+      "collection": "02 | Oculus & Coffered Dome",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "True hemispherical dome shell with open oculus",
+      "collection": "02 | Oculus & Coffered Dome",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 7424,
+      "polygons": 7424
+    },
+    {
+      "name": "192 recessed polygonal dome coffers",
+      "collection": "02 | Oculus & Coffered Dome",
+      "materials": [
+        "IVORY | dome and capitals",
+        "IVORY | dome and capitals",
+        "CALACATTA | warm white procedural marble",
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 12288,
+      "polygons": 9408
+    },
+    {
+      "name": "Oculus carved inner stone ring",
+      "collection": "02 | Oculus & Coffered Dome",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Oculus champagne-gold inner lip",
+      "collection": "02 | Oculus & Coffered Dome",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 1920,
+      "polygons": 1920
+    },
+    {
+      "name": "Dome springing ornamental bead",
+      "collection": "02 | Oculus & Coffered Dome",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 1920,
+      "polygons": 1920
+    },
+    {
+      "name": "Dome springing ornamental bead.001",
+      "collection": "02 | Oculus & Coffered Dome",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 1920,
+      "polygons": 1920
+    },
+    {
+      "name": "Celadon pool basin",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "POOL | deep celadon stone"
+      ],
+      "vertices": 320,
+      "polygons": 162
+    },
+    {
+      "name": "Outer pool retaining wall",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 2560,
+      "polygons": 2560
+    },
+    {
+      "name": "Outer pool coping — rounded marble",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Inner pool retaining wall",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 2560,
+      "polygons": 2560
+    },
+    {
+      "name": "Inner pool coping — rounded marble",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 2560,
+      "polygons": 2560
+    },
+    {
+      "name": "Outer pool gilded waterline",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 1536,
+      "polygons": 1536
+    },
+    {
+      "name": "Inner pool gilded waterline",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 1280,
+      "polygons": 1280
+    },
+    {
+      "name": "Submerged concentric mosaic band",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "POOL | turquoise glass mosaic"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Submerged concentric mosaic band.001",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "POOL | turquoise glass mosaic"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Submerged concentric mosaic band.002",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "POOL | turquoise glass mosaic"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Submerged concentric mosaic band.003",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "POOL | turquoise glass mosaic"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Continuous annular water surface & volume",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "WATER | celadon rippled dielectric"
+      ],
+      "vertices": 5952,
+      "polygons": 5952
+    },
+    {
+      "name": "Island lower circular step",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 1280,
+      "polygons": 1122
+    },
+    {
+      "name": "Island upper circular dais",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 1280,
+      "polygons": 1122
+    },
+    {
+      "name": "Island radial marble paving",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "IVORY | dome and capitals",
+        "IVORY | dome and capitals",
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 8832,
+      "polygons": 8640
+    },
+    {
+      "name": "Island concentric gold inlay",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 1024,
+      "polygons": 1024
+    },
+    {
+      "name": "Island concentric gold inlay.001",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 1024,
+      "polygons": 1024
+    },
+    {
+      "name": "Island concentric gold inlay.002",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 1024,
+      "polygons": 1024
+    },
+    {
+      "name": "Central star sigil — dark inset",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 192,
+      "polygons": 98
+    },
+    {
+      "name": "Island eight-point compass inlay",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 16,
+      "polygons": 8
+    },
+    {
+      "name": "Island eight-point compass inlay.001",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 16,
+      "polygons": 8
+    },
+    {
+      "name": "Island eight-point compass inlay.002",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 16,
+      "polygons": 8
+    },
+    {
+      "name": "Island eight-point compass inlay.003",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 16,
+      "polygons": 8
+    },
+    {
+      "name": "Island eight-point compass inlay.004",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 16,
+      "polygons": 8
+    },
+    {
+      "name": "Island eight-point compass inlay.005",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 16,
+      "polygons": 8
+    },
+    {
+      "name": "Island eight-point compass inlay.006",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 16,
+      "polygons": 8
+    },
+    {
+      "name": "Island eight-point compass inlay.007",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 16,
+      "polygons": 8
+    },
+    {
+      "name": "Single marble bridge over the annular pool",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Bridge fine gold edge",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 20,
+      "polygons": 10
+    },
+    {
+      "name": "Bridge fine gold edge.001",
+      "collection": "03 | Annular Pool & Island",
+      "materials": [
+        "AURUM | polished edge highlights"
+      ],
+      "vertices": 20,
+      "polygons": 10
+    },
+    {
+      "name": "Fine concentric brass floor inlay",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 1536,
+      "polygons": 1536
+    },
+    {
+      "name": "Fine concentric brass floor inlay.001",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 1536,
+      "polygons": 1536
+    },
+    {
+      "name": "Fine concentric brass floor inlay.002",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 1536,
+      "polygons": 1536
+    },
+    {
+      "name": "Fine concentric brass floor inlay.003",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 1536,
+      "polygons": 1536
+    },
+    {
+      "name": "Fine concentric brass floor inlay.004",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 1536,
+      "polygons": 1536
+    },
+    {
+      "name": "Fine concentric brass floor inlay.005",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 1536,
+      "polygons": 1536
+    },
+    {
+      "name": "Fine concentric brass floor inlay.006",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 1536,
+      "polygons": 1536
+    },
+    {
+      "name": "Radial brass paving hairline",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.001",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.002",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.003",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.004",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.005",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.006",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.007",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.008",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.009",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.010",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.011",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.012",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.013",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.014",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.015",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.016",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.017",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.018",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.019",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.020",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.021",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.022",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.023",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.024",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.025",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.026",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.027",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.028",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.029",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.030",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Radial brass paving hairline.031",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 12,
+      "polygons": 6
+    },
+    {
+      "name": "Column 01 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 01 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 01 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 01 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 01 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 01 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 01 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 01 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 01 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 02 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 02 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 02 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 02 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 02 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 02 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 02 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 02 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 02 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 03 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 03 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 03 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 03 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 03 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 03 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 03 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 03 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 03 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 04 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 04 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 04 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 04 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 04 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 04 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 04 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 04 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 04 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 05 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 05 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 05 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 05 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 05 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 05 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 05 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 05 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 05 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 06 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 06 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 06 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 06 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 06 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 06 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 06 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 06 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 06 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 07 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 07 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 07 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 07 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 07 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 07 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 07 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 07 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 07 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 08 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 08 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 08 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 08 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 08 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 08 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 08 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 08 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 08 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 09 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 09 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 09 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 09 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 09 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 09 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 09 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 09 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 09 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 10 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 10 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 10 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 10 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 10 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 10 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 10 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 10 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 10 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 11 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 11 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 11 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 11 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 11 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 11 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 11 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 11 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 11 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 12 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 12 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 12 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 12 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 12 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 12 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 12 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 12 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 12 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 13 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 13 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 13 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 13 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 13 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 13 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 13 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 13 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 13 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 14 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 14 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 14 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 14 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 14 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 14 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 14 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 14 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 14 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 15 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 15 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 15 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 15 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 15 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 15 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 15 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 15 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 15 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 16 | necking astragal",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 640,
+      "polygons": 640
+    },
+    {
+      "name": "Column 16 | acanthus 1",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 16 | acanthus 2",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Column 16 | acanthus 3",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 16 | acanthus 4",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 16 | acanthus 5",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 16 | acanthus 6",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 16 | acanthus 7",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 82,
+      "polygons": 86
+    },
+    {
+      "name": "Column 16 | acanthus 8",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 98,
+      "polygons": 102
+    },
+    {
+      "name": "Gilded frieze lower thread",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Gilded frieze upper thread",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 3072,
+      "polygons": 3072
+    },
+    {
+      "name": "Frieze triglyph",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.001",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.002",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.001",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.003",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.004",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.002",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.005",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.006",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.003",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.007",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.008",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.004",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.009",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.010",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.005",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.011",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.012",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.006",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.013",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.014",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.007",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.015",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.016",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.008",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.017",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.018",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.009",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.019",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.020",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.010",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.021",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.022",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.011",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.023",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.024",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.012",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.025",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.026",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.013",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.027",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.028",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.014",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.029",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.030",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.015",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.031",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.032",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.016",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.033",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.034",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.017",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.035",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.036",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.018",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.037",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.038",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.019",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.039",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.040",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.020",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.041",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.042",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.021",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.043",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.044",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.022",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.045",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.046",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.023",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.047",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.048",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.024",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.049",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.050",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.025",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.051",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.052",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.026",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.053",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.054",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.027",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.055",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.056",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.028",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.057",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.058",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.029",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.059",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.060",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.030",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.061",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.062",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Cornice dentil.031",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Frieze triglyph.063",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "PEARL | subtle alternate stone"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Arched niche 01 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 01 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 02 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 02 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.001",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.001",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 03 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 03 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.002",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.002",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 04 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 04 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.003",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.003",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 05 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 05 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.004",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.004",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 06 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 06 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.005",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.005",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 07 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 07 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.006",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.006",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 08 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 08 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.007",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.007",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 09 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 09 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.008",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.008",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 10 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 10 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.009",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.009",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 11 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 11 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.010",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.010",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 12 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 12 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.011",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.011",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 13 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 13 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.012",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.012",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 14 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 14 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.013",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.013",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 15 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 15 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.014",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.014",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Arched niche 16 | shadowed back",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "SHADOW | blue-grey recessed stone"
+      ],
+      "vertices": 27,
+      "polygons": 1
+    },
+    {
+      "name": "Arched niche 16 | marble archivolt",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "IVORY | dome and capitals"
+      ],
+      "vertices": 270,
+      "polygons": 260
+    },
+    {
+      "name": "Niche marble sill.015",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "CALACATTA | warm white procedural marble"
+      ],
+      "vertices": 96,
+      "polygons": 98
+    },
+    {
+      "name": "Small gilded niche rosette.015",
+      "collection": "04 | Classical Details",
+      "materials": [
+        "AURUM | brushed champagne gold"
+      ],
+      "vertices": 114,
+      "polygons": 128
+    },
+    {
+      "name": "Starfire_MainCrystal",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_GoldFacet_01",
+        "Starfire_GoldFacet_02",
+        "Starfire_GoldFacet_03",
+        "Starfire_GoldFacet_04",
+        "Starfire_GoldFacet_05"
+      ],
+      "vertices": 192,
+      "polygons": 194
+    },
+    {
+      "name": "Starfire_Trail_01",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_TrailGold"
+      ],
+      "vertices": 1140,
+      "polygons": 1126
+    },
+    {
+      "name": "Starfire_Trail_02",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_TrailChampagne"
+      ],
+      "vertices": 1140,
+      "polygons": 1126
+    },
+    {
+      "name": "Starfire_Trail_03",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_TrailRoseGold"
+      ],
+      "vertices": 1140,
+      "polygons": 1126
+    },
+    {
+      "name": "Starfire_Sparkle_001",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_002",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_003",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_004",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkTeal"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_005",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_006",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_007",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_008",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkRose"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_009",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkTeal"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_010",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_011",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_012",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_013",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_014",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_015",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_016",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_017",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_018",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_019",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_020",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_021",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_022",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_023",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_024",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_025",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_026",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_027",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_028",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_029",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_030",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_031",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_032",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_033",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_034",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_035",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_036",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_037",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkRose"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_038",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_039",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkRose"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_040",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_041",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkRose"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_042",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkTeal"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_043",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_044",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_045",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_046",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_047",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_048",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkRose"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_049",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_050",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_051",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_052",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_053",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_054",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_055",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_056",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_057",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_Sparkle_058",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 6,
+      "polygons": 8
+    },
+    {
+      "name": "Starfire_MiniStar_01",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 106,
+      "polygons": 112
+    },
+    {
+      "name": "Starfire_MiniStar_02",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 106,
+      "polygons": 112
+    },
+    {
+      "name": "Starfire_MiniStar_03",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 106,
+      "polygons": 112
+    },
+    {
+      "name": "Starfire_MiniStar_04",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkRose"
+      ],
+      "vertices": 106,
+      "polygons": 112
+    },
+    {
+      "name": "Starfire_MiniStar_05",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 106,
+      "polygons": 112
+    },
+    {
+      "name": "Starfire_MiniStar_06",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkTeal"
+      ],
+      "vertices": 106,
+      "polygons": 112
+    },
+    {
+      "name": "Starfire_MiniStar_07",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 106,
+      "polygons": 112
+    },
+    {
+      "name": "Starfire_MiniStar_08",
+      "collection": "07 | SPARK — Floating Aureate Star",
+      "materials": [
+        "Starfire_SparkGold"
+      ],
+      "vertices": 106,
+      "polygons": 112
+    }
+  ],
+  "object_count": 610,
+  "vertices": 332608,
+  "polygons": 318582,
+  "axis_forward": "-Z",
+  "axis_up": "Y",
+  "uv": "per-face box mapping"
+}
