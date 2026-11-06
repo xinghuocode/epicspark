@@ -63,6 +63,7 @@ ExportedObj/
 .idea/**/workspace.xml
 .idea/**/usage.statistics.xml
 .idea/**/shelf/
+.vscode
 
 # ---------------------------- 构建产物 ----------------------------
 *.apk
