@@ -27,6 +27,8 @@ namespace EpicSpark.AI.SceneAgentTest
         string sysPrompt = SceneAgentRunner.DefaultSystemPrompt;
         string sceneJson = SceneAgentRunner.DefaultGenerateSceneJson;
         string pipelinePrompt = "a medieval wooden barrel, single object, centered, product photo";
+        string plotEvent = "法国大革命";
+        string plotKnowledge = "";
         bool showApiKey;
 
         Vector2 scroll;
@@ -67,6 +69,7 @@ namespace EpicSpark.AI.SceneAgentTest
             DrawEndpointSection();
             DrawPromptSection();
             DrawControlSection();
+            DrawPlotAgentSection();
             DrawPipelineTestSection();
             DrawLogSection();
 
@@ -135,6 +138,45 @@ namespace EpicSpark.AI.SceneAgentTest
                 : runner.IsRunning ? $"运行中… 第 {runner.CurrentRound} 轮"
                 : "空闲";
             GUILayout.Label(status, statusStyle);
+        }
+
+        void DrawPlotAgentSection()
+        {
+            GUILayout.Space(8);
+            GUILayout.Label("剧情Agent测试 (从预置场景目录选择, 原生Function Calling)", subHeadingStyle);
+            plotEvent = TextField("历史事件", plotEvent);
+            plotKnowledge = TextField("知识信息(可空)", plotKnowledge);
+            GUILayout.BeginHorizontal();
+            GUI.enabled = runner != null && !runner.IsRunningPlot && !runner.IsRunning;
+            if (GUILayout.Button("▶ 运行剧情Agent", GUILayout.Height(26))) RunPlot();
+            GUI.enabled = runner != null && runner.LastPlotDecision != null && !runner.IsRunning;
+            if (GUILayout.Button("应用为场景参数", GUILayout.Height(26)))
+            {
+                if (runner.ApplyPlotDecision())
+                    sceneJson = runner.generateSceneJson; // 同步到面板输入框
+            }
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+            if (runner != null && runner.IsRunningPlot)
+                GUILayout.Label("剧情Agent推理中…", statusStyle);
+        }
+
+        void RunPlot()
+        {
+            if (runner == null) EnsureRunner();
+            if (runner == null) { Debug.LogError("[SceneAgentTestPanel] SceneAgentRunner 不存在"); return; }
+
+            var settings = ScriptableObject.CreateInstance<OpenAISettings>();
+            settings.baseUrl = baseUrl;
+            settings.apiKey = apiKey;
+            settings.model = model;
+            settings.timeoutSeconds = int.TryParse(timeoutSeconds, out int t) && t > 0 ? t : 120;
+            runner.settings = settings;
+
+            PlayerPrefs.SetString(PrefsPrefix + "plotEvent", plotEvent ?? "");
+            PlayerPrefs.SetString(PrefsPrefix + "plotKnowledge", plotKnowledge ?? "");
+            PlayerPrefs.Save();
+            runner.RunPlotAgent(plotEvent, plotKnowledge);
         }
 
         void DrawPipelineTestSection()
@@ -272,6 +314,8 @@ namespace EpicSpark.AI.SceneAgentTest
             if (string.IsNullOrWhiteSpace(sysPrompt)) sysPrompt = SceneAgentRunner.DefaultSystemPrompt;
             if (string.IsNullOrWhiteSpace(sceneJson)) sceneJson = SceneAgentRunner.DefaultGenerateSceneJson;
             pipelinePrompt = PlayerPrefs.GetString(PrefsPrefix + "pipelinePrompt", pipelinePrompt);
+            plotEvent = PlayerPrefs.GetString(PrefsPrefix + "plotEvent", plotEvent);
+            plotKnowledge = PlayerPrefs.GetString(PrefsPrefix + "plotKnowledge", plotKnowledge);
         }
 
         void SavePrefs()

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using EpicSpark.AI.OpenAI;
+using EpicSpark.AI.StoryAgent;
 using UnityEngine;
 
 namespace EpicSpark.AI.SceneAgentTest
@@ -49,6 +50,66 @@ namespace EpicSpark.AI.SceneAgentTest
 
         /// <summary>是否正在测试模型生成管线。</summary>
         public bool IsTestingPipeline => testingPipeline;
+
+        /// <summary>是否正在运行剧情Agent。</summary>
+        public bool IsRunningPlot => runningPlot;
+
+        /// <summary>剧情Agent最近一次决策(可应用为场景参数)。</summary>
+        public PlotDecision LastPlotDecision { get; private set; }
+
+        // ================== 剧情Agent ==================
+
+        [ContextMenu("运行剧情Agent测试")]
+        public async void RunPlotAgent(string userEvent, string knowledgeContext)
+        {
+            if (runningPlot) { Log("[剧情Agent] 正在运行中…"); return; }
+            if (settings == null) { LogError("[剧情Agent] 未配置 OpenAISettings"); return; }
+
+            runningPlot = true;
+            LastPlotDecision = null;
+            var cts2 = new CancellationTokenSource();
+            var plotClient = new OpenAIClient(settings);
+            AppendTranscript("===== 剧情Agent测试 =====\n事件: " + userEvent + "\n");
+            Log("[剧情Agent] 开始: " + userEvent);
+            try
+            {
+                var agent = new PlotAgent();
+                var decision = await agent.BeginAsync(plotClient, userEvent, knowledgeContext ?? "", s => Log("[剧情Agent] " + s), cts2.Token);
+                if (decision == null)
+                {
+                    LogError("[剧情Agent] 失败: " + agent.LastError);
+                    AppendTranscript("剧情Agent失败: " + agent.LastError + "\n");
+                    return;
+                }
+                LastPlotDecision = decision;
+                if (decision.gameOver)
+                {
+                    Log($"[剧情Agent] 直接结束游戏: {decision.finishReason} | {decision.finishSummary} | 成就: {decision.finishAchievement}");
+                }
+                else
+                {
+                    Log($"[剧情Agent] 进入场景「{decision.enterName}」(原地={decision.isStillInPlace}, 替换建模={decision.isReplaceModel})\n" +
+                        $"由预置定义推导的场景参数:\n{decision.ToGenerateSceneJson()}");
+                    AppendTranscript($"[剧情Agent] enter_scene {decision.enterName}\n{decision.ToGenerateSceneJson()}\n");
+                }
+            }
+            catch (OperationCanceledException) { Log("[剧情Agent] 已取消"); }
+            catch (Exception e) { LogError("[剧情Agent] 异常: " + e.Message); }
+            finally
+            {
+                plotClient.Dispose();
+                runningPlot = false;
+            }
+        }
+
+        /// <summary>把剧情Agent最近一次决策应用为下方 generate_scene 参数。</summary>
+        public bool ApplyPlotDecision()
+        {
+            if (LastPlotDecision == null) return false;
+            generateSceneJson = LastPlotDecision.ToGenerateSceneJson();
+            Log("[剧情Agent] 已应用决策到 generate_scene 参数框。");
+            return true;
+        }
 
         /// <summary>
         /// 单独测试 文生图→去背景→图生3D 完整管线(不跑场景Agent)。
@@ -306,6 +367,7 @@ namespace EpicSpark.AI.SceneAgentTest
 
         bool running;
         bool testingPipeline;
+        bool runningPlot;
         SceneWorld world;
         SceneBuilder3D builder;
         GameObject experiencePlayer;

@@ -2,7 +2,7 @@
  "meta": {
   "dim": 1024,
   "embed_model": "Qwen3-Embedding-8B",
-  "count": 43,
+  "count": 45,
   "normalized": true,
   "updated_at": "2026-11-07T20:05:36"
  },
@@ -44511,6 +44511,24 @@
     0.011441,
     0.036563
    ]
+  },
+  {
+   "id": "mdl_stilt_house_001",
+   "name": "干栏式建筑",
+   "prompt": "a neolithic Chinese pile dwelling stilt house, wooden platform raised on many wooden stilts above water, thatched straw roof, wooden ladder, single building, centered, plain white background, product photo",
+   "category": "building",
+   "pivot": "bottom",
+   "glb": "Assets/Generated/Models/mdl_stilt_house_001.glb",
+   "created_at": "2026-11-08T06:06:00"
+  },
+  {
+   "id": "mdl_haystack_001",
+   "name": "稻草堆",
+   "prompt": "a round rice straw haystack, golden yellow dried rice straw piled into a dome shape, single object, centered, plain white background, product photo",
+   "category": "prop",
+   "pivot": "bottom",
+   "glb": "Assets/Generated/Models/mdl_haystack_001.glb",
+   "created_at": "2026-11-08T06:08:00"
   }
  ]
 }

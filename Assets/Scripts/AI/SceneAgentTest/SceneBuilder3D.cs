@@ -384,10 +384,29 @@ namespace EpicSpark.AI.SceneAgentTest
             s_builtinFont ?? (s_builtinFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
     }
 
+    /// <summary>永不 defer 的 IDeferAgent: 避免 glTFast 创建带 DontDestroyOnLoad 的常驻对象(Editor 下会抛异常)。</summary>
+    class NoDeferAgent : IDeferAgent
+    {
+        public static readonly NoDeferAgent Instance = new NoDeferAgent();
+        public bool ShouldDefer() => false;
+        public bool ShouldDefer(float duration) => false;
+        public Task BreakPoint() => Task.CompletedTask;
+        public Task BreakPoint(float duration) => Task.CompletedTask;
+    }
+
     /// <summary>GLB 模型加载缓存(按工程内路径), 避免重复解析。</summary>
     static class ModelGltfCache
     {
         static readonly Dictionary<string, Task<GltfImport>> cache = new Dictionary<string, Task<GltfImport>>();
+
+        /// <summary>清空缓存并释放已加载的 GltfImport(场景卸载后其 Mesh 可能已被 UnloadUnusedAssets 销毁, 必须重建)。</summary>
+        public static void Clear()
+        {
+            foreach (var kv in cache)
+                if (kv.Value.IsCompleted && kv.Value.Result != null)
+                    kv.Value.Result.Dispose();
+            cache.Clear();
+        }
 
         public static Task<GltfImport> LoadAsync(string glbPath)
         {
@@ -409,7 +428,9 @@ namespace EpicSpark.AI.SceneAgentTest
                 Debug.LogWarning("[SceneBuilder3D] GLB 文件不存在: " + fullPath);
                 return null;
             }
-            var gltf = new GltfImport();
+            // 自定义 IDeferAgent: glTFast 默认 defer agent 会创建 glTF-StableFramerate 对象并调
+            // DontDestroyOnLoad, 在 Editor 脚本中直接抛异常; 永不 defer 的 agent 可绕开且加载更快。
+            var gltf = new GltfImport(null, NoDeferAgent.Instance);
             string uri = new Uri(fullPath).AbsoluteUri;
             bool ok = await gltf.Load(uri);
             if (!ok)
