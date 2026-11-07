@@ -12,6 +12,7 @@
 | `OpenAI/StreamingDownloadHandler.cs` | SSE 流式数据处理器 |
 | `OpenAI/OpenAITester.cs` | 运行时冒烟测试组件 |
 | `Editor/OpenAISettingsEditor.cs` | 配置资源的 Inspector 扩展 (编辑器内 Ping 测试) |
+| `Knowledge/` | 知识库 RAG 客户端: 事件卡片 / 混合检索 / 重排结果，对接 `Tools/knowledge_rag`，见 [`Docs/KnowledgeRAG.md`](../../../Docs/KnowledgeRAG.md) |
 
 ## 快速开始
 
@@ -60,6 +61,26 @@ float[] vector = emb.data[0].embedding;
 
 client.Dispose();
 ```
+
+## 知识库检索 (Knowledge)
+
+历史知识不走 LLM 现编，而是由独立的 RAG 服务提供（`Tools/knowledge_rag`，架构文档第 5 章）：
+
+```csharp
+using EpicSpark.AI.Knowledge;
+
+var kb = new KnowledgeClient(settings);              // settings 为 KnowledgeSettings 资源
+
+// 开局: 用户输入 -> 事件卡片 + 可拼进提示词的知识上下文
+var card = await kb.GetEventCardAsync("法国大革命");
+string context = card.context;                        // 直接塞进剧情 Agent 的 user 消息
+
+// 过程中: 任意追问
+var hits = await kb.SearchAsync("巴士底狱陷落后发生了什么", topK: 5);
+```
+
+服务默认监听 `http://127.0.0.1:8787`，启动方式见 [`Docs/KnowledgeRAG.md`](../../../Docs/KnowledgeRAG.md)。
+未配置 API Key 时会自动降级为本地向量 + 本地重排，离线也能开发调试。
 
 ## 设计决策记录
 
