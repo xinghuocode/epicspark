@@ -152,13 +152,13 @@ namespace EpicSpark.AI.Knowledge
                 if (best != null && best.confidence >= 1f) continue;
 
                 if (item.aliases == null) item.aliases = new string[0];
-                var names = new List<string> { item.title };
-                names.AddRange(item.aliases);
-                foreach (string name in names)
-                    ConsiderName(item, name, raw, strippedQuery, false, ref best);
+                // 标题是事件身份，别名只是线索：新专题《武昌起义》必须优先于旧事件的“武昌起义”别名。
+                ConsiderName(item, item.title, raw, strippedQuery, false, true, ref best);
+                foreach (string alias in item.aliases)
+                    ConsiderName(item, alias, raw, strippedQuery, false, false, ref best);
                 if (item.keywords != null)
                     foreach (string keyword in item.keywords)
-                        ConsiderName(item, keyword, raw, strippedQuery, true, ref best);
+                        ConsiderName(item, keyword, raw, strippedQuery, true, false, ref best);
 
                 var queryTokens = KnowledgeText.TokenSet(strippedQuery);
                 string joinedNames = item.title + " " + string.Join(" ", item.aliases);
@@ -199,6 +199,7 @@ namespace EpicSpark.AI.Knowledge
             string raw,
             string stripped,
             bool keyword,
+            bool isTitle,
             ref KnowledgeMatch best)
         {
             string normalized = KnowledgeText.Normalize(name);
@@ -215,15 +216,15 @@ namespace EpicSpark.AI.Knowledge
             }
 
             if (raw == normalized || stripped == strippedName)
-                Consider(item, 0.99f, "exact", ref best);
+                Consider(item, isTitle ? 1f : 0.99f, isTitle ? "title_exact" : "exact", ref best);
             else if (normalized.Length >= 2 && raw.Contains(normalized))
-                Consider(item, 0.92f + Math.Min(0.06f, normalized.Length / 200f), "contains", ref best);
+                Consider(item, (isTitle ? 0.94f : 0.92f) + Math.Min(0.06f, normalized.Length / 200f), "contains", ref best);
             else if (strippedName.Length >= 2 && stripped.Contains(strippedName))
-                Consider(item, 0.90f + Math.Min(0.06f, strippedName.Length / 200f), "contains", ref best);
+                Consider(item, (isTitle ? 0.92f : 0.90f) + Math.Min(0.06f, strippedName.Length / 200f), "contains", ref best);
             else if (raw.Length >= 2 && normalized.Contains(raw))
-                Consider(item, 0.88f, "contained_by", ref best);
+                Consider(item, isTitle ? 0.90f : 0.88f, "contained_by", ref best);
             else if (stripped.Length >= 2 && strippedName.Contains(stripped))
-                Consider(item, 0.86f, "contained_by", ref best);
+                Consider(item, isTitle ? 0.88f : 0.86f, "contained_by", ref best);
         }
 
         private static void Consider(

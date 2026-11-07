@@ -18,7 +18,7 @@ flowchart LR
     RR --> CX[事件卡片 / 提示词上下文]
     CX --> S
     S --> A[剧情 Agent]
-    D[Resources/Knowledge/Events<br/>300 个事件 JSONL] --> E
+    D[Resources/Knowledge/Events<br/>400 个事件 JSONL] --> E
     E --> IDX[Application.persistentDataPath<br/>向量索引]
     E -.可选.-> M[baseUrl 指定的<br/>Embedding / Rerank 模型端点]
 ```
@@ -46,13 +46,17 @@ Assets/
 │   ├── more3_china.txt    # 中国史第三批 25 个
 │   ├── more4_china_ancient.txt   # 中国史第四批·古代 25 个
 │   ├── more4_china_modern.txt    # 中国史第四批·近现代 25 个
+│   ├── more5_china_ancient.txt   # 中国史第五批·古代 25 个
+│   ├── more5_china_modern.txt    # 中国史第五批·近现代 25 个
 │   ├── world.txt          # 世界史主干 26 个
 │   ├── extra_world.txt    # 世界史补充 8 个
 │   ├── more_world.txt     # 世界史扩充 18 个
 │   ├── more2_world.txt    # 世界史再扩充 25 个
 │   ├── more3_world.txt    # 世界史第三批 25 个
 │   ├── more4_world_premodern.txt # 世界史第四批·古代中古 25 个
-│   └── more4_world_modern.txt    # 世界史第四批·近现代 25 个
+│   ├── more4_world_modern.txt    # 世界史第四批·近现代 25 个
+│   ├── more5_world_premodern.txt # 世界史第五批·古代中古 25 个
+│   └── more5_world_modern.txt    # 世界史第五批·近现代 25 个
 └── Scripts/AI/Knowledge/
     ├── KnowledgeSettings.cs         # ScriptableObject 配置，含 baseUrl
     ├── KnowledgeClient.cs           # 主程序入口
@@ -67,8 +71,8 @@ Assets/
     └── Editor/KnowledgeEditorTools.cs
 ```
 
-当前语料：**300 个事件 / 1905 个文本块 / 394 条来源**。
-中国史 148 个（古代 83、近现代 65）；世界史 152 个（古代 35、中古 33、近代 43、现代 41）。
+当前语料：**400 个事件 / 2455 个文本块 / 547 条来源**。
+中国史 198 个（古代 108、近现代 90）；世界史 202 个（古代 47、中古 46、近代 53、现代 56）。
 逐事件目录见 [`Docs/KnowledgeEvents.md`](KnowledgeEvents.md)。
 
 ## 3. 快速开始
@@ -130,7 +134,7 @@ KnowledgeHealth health = await knowledge.HealthAsync();
 
 ## 5. 检索流程
 
-1. **事件解析**：标题、别名、关键词、词项覆盖和编辑相似度；标题精确匹配优先于其他事件的关键词。
+1. **事件解析**：标题、别名、关键词、词项覆盖和编辑相似度；事件标题优先于其他事件的别名与关键词，避免专题被总括事件抢走。
 2. **查询扩展**：例如「法国的革命」命中《法国大革命》后，将标准标题并入检索词。
 3. **双路召回**：向量 Top-`2×candidates`；BM25 Top-`2×candidates`。
 4. **RRF 融合**：`score = Σ 1 / (rrfK + rank)`。
@@ -194,16 +198,16 @@ Unity `Resources.LoadAll<TextAsset>` 在编辑器、Windows 和 Android 包内�
 ## 9. 验证
 
 - 全部 C# 文件已用 Roslyn 编译通过。
-- 使用最小 Unity API 桩运行完整链路，**920 项断言通过**：
-  - 300 个事件、1905 个文本块加载成功；
-  - 300/300 个事件标题解析到自身，300/300 标题检索排名第一；
+- 使用最小 Unity API 桩运行完整链路，**1220 项断言通过**：
+  - 400 个事件、2455 个文本块加载成功；
+  - 400/400 个事件标题解析到自身，400/400 标题检索排名第一；
   - 口语查询、时代过滤、事件卡片、上下文预算、索引写入与二次加载通过；
   - 远端无 Key / 失败时本地降级与检索通过。
 - 当前机器未安装 Unity Editor，未声称做过编辑器内 Play 验证；在目标 Unity 2022.3 中可用 `KnowledgeTester` 和 Validate Corpus 菜单复验。
 
 ## 10. 边界
 
-- 300 个事件是课程级精选知识，不是全量史料库；未收录事件走通用检索。
+- 400 个事件是课程级精选知识，不是全量史料库；未收录事件走通用检索。
 - 本地向量主要做词面匹配；对没有共同字面的复杂语义问法，应使用远端嵌入模型。
 - 千级文本块使用精确向量检索，避免 ANN 原生依赖；未来达到十万级再考虑托管兼容的近似索引。
 - 模型端点的 rerank 返回格式并不完全统一，客户端兼容 `results/data/scores` 以及字符串/对象两种 documents 请求形式。
