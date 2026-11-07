@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,6 +47,71 @@ namespace EpicSpark.AI.SceneAgentTest
         /// <summary>是否正在场景体验中。</summary>
         public bool IsExperiencing => experiencePlayer != null;
 
+        /// <summary>是否正在测试模型生成管线。</summary>
+        public bool IsTestingPipeline => testingPipeline;
+
+        /// <summary>
+        /// 单独测试 文生图→去背景→图生3D 完整管线(不跑场景Agent)。
+        /// 成功后 GLB 保存到 persistentDataPath 并在场景中显示预览。
+        /// </summary>
+        public async void TestModelPipeline(string prompt)
+        {
+            if (testingPipeline) { Log("[管线测试] 正在进行中..."); return; }
+            if (settings == null) { LogError("[管线测试] 未配置 OpenAISettings"); return; }
+            if (string.IsNullOrWhiteSpace(prompt)) { LogError("[管线测试] 提示词为空"); return; }
+
+            testingPipeline = true;
+            AppendTranscript("===== 模型生成管线测试 =====\n提示词: " + prompt + "\n");
+            Log("[管线测试] 开始(约需1-5分钟): " + prompt);
+            var testClient = new OpenAIClient(settings);
+            try
+            {
+                var pipeline = new ModelGenerationPipeline(testClient);
+                byte[] glb = await pipeline.GenerateGlbAsync(prompt, s => Log("[管线测试] " + s), CancellationToken.None);
+                string dir = Path.Combine(Application.persistentDataPath, "PipelineTest");
+                Directory.CreateDirectory(dir);
+                string path = Path.Combine(dir, "test_model.glb");
+                File.WriteAllBytes(path, glb);
+
+                string okMsg = $"管线测试成功! GLB {glb.Length / 1024} KB → {path}";
+                Log("[管线测试] " + okMsg);
+                AppendTranscript(okMsg + "\n");
+
+                // 场景内预览: 缩放到约8m, 放在起点/场景中心上方
+                var gltf = await ModelGltfCache.LoadAsync(path);
+                if (gltf != null)
+                {
+                    var holder = new GameObject("PipelineTestModel");
+                    if (await gltf.InstantiateMainSceneAsync(holder.transform))
+                    {
+                        var renderers = holder.GetComponentsInChildren<Renderer>();
+                        if (renderers.Length > 0)
+                        {
+                            var b = renderers[0].bounds;
+                            foreach (var r in renderers) b.Encapsulate(r.bounds);
+                            float s = 8f / Mathf.Max(b.size.x, b.size.y, b.size.z, 0.01f);
+                            holder.transform.localScale = Vector3.one * s;
+                        }
+                        float px = world != null && world.HasStartPoint ? (float)world.StartX : 0f;
+                        float py = world != null && world.HasStartPoint ? (float)world.StartY : 0f;
+                        float gy = world != null ? (float)world.TerrainHeight(px + 6, py + 6) : 0f;
+                        holder.transform.position = new Vector3(px + 6, gy, py + 6);
+                        Log("[管线测试] 已在场景中生成预览 (PipelineTestModel)");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                LogError("[管线测试] 失败: " + e.Message);
+                AppendTranscript("管线测试失败: " + e.Message + "\n");
+            }
+            finally
+            {
+                testClient.Dispose();
+                testingPipeline = false;
+            }
+        }
+
         /// <summary>当前执行到的轮数(未开始为 0)。</summary>
         public int CurrentRound { get; private set; }
 
@@ -65,8 +131,9 @@ namespace EpicSpark.AI.SceneAgentTest
             "\n" +
             "工作规则:\n" +
             "- 第一个工具调用必须是 init_terrain。\n" +
-            "- 所有模型必须从缓存模型库中选择: 先用 search_model 搜索, 返回结果中有 id、名称、提示词; " +
-            "选择语义最接近需求的模型, 用其 id 调用 place_model。模型库中没有人形模型时, NPC 相关需求可忽略或用场景道具烘托。\n" +
+            "- 所有模型先从缓存模型库中选择: 先用 search_model 搜索, 返回结果中有 id、名称、提示词; " +
+            "选择语义最接近需求的模型, 用其 id 调用 place_model。若库中没有语义接近的模型, 才调用 generate_model 生成" +
+            "(耗时可达数分钟, 仅在确实需要时使用), 返回的新模型 id 可立即用于 place_model。\n" +
             "- 布局要符合场景描述与要求, 坐标必须在场景尺寸范围内, 模型之间不要重叠。\n" +
             "- 每个传送锚点都必须用 set_auchor_point 绑定一个符合其描述要求的已放置模型实例。\n" +
             "- 每次回复只发起一轮工具调用, 收到工具结果(以 OK 或 ERROR 开头的消息)后再决定下一步。\n" +
@@ -142,6 +209,8 @@ namespace EpicSpark.AI.SceneAgentTest
                 var library = ModelLibrary.Load();
                 world = new SceneWorld(sceneName, width, length, anchors, library);
                 world.ToolExecuted += OnToolExecuted;
+                world.Pipeline = new ModelGenerationPipeline(client); // generate_model 真实生成管线
+                world.Info += Log;
                 builder = SceneBuilder3D.Attach(world); // 3D 场景构建: 每次工具调用成功后重建
 
                 var messages = new List<ChatMessage>
@@ -203,7 +272,7 @@ namespace EpicSpark.AI.SceneAgentTest
                         }
 
                         AppendTranscript($"[LLM 第{round}轮调用 {tool}] {tc.function?.arguments}\n");
-                        string result = world.ExecuteToolCall(tool, args);
+                        string result = await world.ExecuteToolCallAsync(tool, args, cts.Token);
                         AppendTranscript($"[工具 {tool} 结果] {result}\n");
                         messages.Add(ChatMessage.Tool(tc.id, result));
                     }
@@ -221,7 +290,7 @@ namespace EpicSpark.AI.SceneAgentTest
             catch (Exception e) { LogError("[SceneAgentTest] 运行失败: " + e.Message); }
             finally
             {
-                if (world != null) world.ToolExecuted -= OnToolExecuted;
+                if (world != null) { world.ToolExecuted -= OnToolExecuted; world.Info -= Log; }
                 // 注意: builder 不在此销毁, 让已生成的3D场景留在场景中供查看; 下次运行会整体替换
                 running = false;
             }
@@ -236,6 +305,7 @@ namespace EpicSpark.AI.SceneAgentTest
         // ================== 内部 ==================
 
         bool running;
+        bool testingPipeline;
         SceneWorld world;
         SceneBuilder3D builder;
         GameObject experiencePlayer;

@@ -26,6 +26,7 @@ namespace EpicSpark.AI.SceneAgentTest
         string timeoutSeconds = "120";
         string sysPrompt = SceneAgentRunner.DefaultSystemPrompt;
         string sceneJson = SceneAgentRunner.DefaultGenerateSceneJson;
+        string pipelinePrompt = "a medieval wooden barrel, single object, centered, product photo";
         bool showApiKey;
 
         Vector2 scroll;
@@ -66,6 +67,7 @@ namespace EpicSpark.AI.SceneAgentTest
             DrawEndpointSection();
             DrawPromptSection();
             DrawControlSection();
+            DrawPipelineTestSection();
             DrawLogSection();
 
             GUILayout.EndScrollView();
@@ -133,6 +135,37 @@ namespace EpicSpark.AI.SceneAgentTest
                 : runner.IsRunning ? $"运行中… 第 {runner.CurrentRound} 轮"
                 : "空闲";
             GUILayout.Label(status, statusStyle);
+        }
+
+        void DrawPipelineTestSection()
+        {
+            GUILayout.Space(8);
+            GUILayout.Label("模型生成管线测试 (文生图→去背景→图生3D)", subHeadingStyle);
+            pipelinePrompt = TextField("提示词", pipelinePrompt);
+            GUILayout.BeginHorizontal();
+            GUI.enabled = runner != null && !runner.IsTestingPipeline && !runner.IsRunning;
+            if (GUILayout.Button("▶ 测试生成", GUILayout.Height(26))) TestPipeline();
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+            if (runner != null && runner.IsTestingPipeline)
+                GUILayout.Label("生成中… (通常 1-5 分钟, 见下方日志)", statusStyle);
+        }
+
+        void TestPipeline()
+        {
+            if (runner == null) EnsureRunner();
+            if (runner == null) { Debug.LogError("[SceneAgentTestPanel] SceneAgentRunner 不存在"); return; }
+
+            var settings = ScriptableObject.CreateInstance<OpenAISettings>();
+            settings.baseUrl = baseUrl;
+            settings.apiKey = apiKey;
+            settings.model = model;
+            settings.timeoutSeconds = int.TryParse(timeoutSeconds, out int t) && t > 0 ? t : 120;
+            runner.settings = settings;
+
+            PlayerPrefs.SetString(PrefsPrefix + "pipelinePrompt", pipelinePrompt ?? "");
+            PlayerPrefs.Save();
+            runner.TestModelPipeline(pipelinePrompt);
         }
 
         void DrawLogSection()
@@ -238,6 +271,7 @@ namespace EpicSpark.AI.SceneAgentTest
             // 兼容旧版本存空的记录: 空白时回落到范例
             if (string.IsNullOrWhiteSpace(sysPrompt)) sysPrompt = SceneAgentRunner.DefaultSystemPrompt;
             if (string.IsNullOrWhiteSpace(sceneJson)) sceneJson = SceneAgentRunner.DefaultGenerateSceneJson;
+            pipelinePrompt = PlayerPrefs.GetString(PrefsPrefix + "pipelinePrompt", pipelinePrompt);
         }
 
         void SavePrefs()

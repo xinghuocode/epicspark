@@ -78,12 +78,25 @@ SceneExperienceController (第一人称体验, 可选)
 | `set_auchor_point` | 传送锚点绑定模型实例 | 锚点名必须在剧情Agent列表中；实例必须已放置 |
 | `set_start_point` | 玩家起始点 | 越界拒绝 |
 | `search_model` | 搜索缓存模型库 | 空串返回全部（≤20 条） |
+| `generate_model` | 真实生成模型（管线见 §5.1） | prompt 非空；管线需网络与 API Key |
 | `finish_scene` | 完成并终检 | 地形/起始点/全部锚点绑定/至少一个模型 |
 
-> 已按需求移除 `generate_model` 与 `place_npc`。模型只能选自缓存库
-> （`Assets/Generated/Models/model_library.json`，43 个 GLB）。
+> `place_npc` 已移除。模型首选缓存库（`model_library.json`，43 个 GLB），
+> 找不到合适模型时由 `generate_model` 实时生成。
 
 ## 5. 3D 构建规则
+
+### 5.1 generate_model 模型生成管线 (ARCHITECT §4.4)
+
+`ModelGenerationPipeline.cs` 调用 ai.gitee.com 三连：
+
+1. **Z-Image-Turbo 文生图**：`POST /v1/images/generations`（JSON，`b64_json`）
+2. **RMBG-2.0 去背景**：`POST /v1/images/edits`（multipart，`model=RMBG-2.0`；gitee 无独立去背景端点，已实测 `/images/background-removal` 等为 404；失败自动回退原图——Hunyuan3D 内部也会 rembg）
+3. **Hunyuan3D-2 图生3D**：`POST /v1/async/image-to-3d`（multipart 提交异步任务）→ 每 5s 轮询 `GET /v1/task/{id}`（最长 15 分钟）→ `output.file_url` 下载 GLB
+
+GLB 落盘到**运行时持久化目录** `Application.persistentDataPath/GeneratedModels/mdl_gen_NNN.glb`
+（**不写入开发目录 Assets/**，避免污染工程与版本库），并登记入内存模型库，Agent 可立即 `place_model`。
+词嵌入向量缓存比对（Qwen3-Embedding + 余弦相似度阈值）**暂未接入**。
 
 - **坐标**：平面 (x, y) → 世界 (x, 地形高度, y)；场景尺寸 = `width × length`（米）
 - **地形**：高度函数（山脉/河流沿节点连线形成**连续轮廓**，战壕沿线段下切 1.8m）
@@ -110,7 +123,8 @@ SceneExperienceController (第一人称体验, 可选)
 | 水面 | 半透明条带，随河道折线分段直线拼接（非流动/无反射） |
 | generate_model / place_npc | 已移除（见第 4 节） |
 | 模型重叠检测 | 未实现（系统提示词中"不要重叠"靠 LLM 自觉） |
-| 词嵌入缓存阈值（§4.4） | 未接入（模型库为关键词搜索） |
+| 词嵌入缓存阈值（§4.4） | 未接入（模型库为关键词搜索；generate_model 无缓存复用判断） |
+| RMBG-2.0 端点 | 走 `/v1/images/edits`（`model=RMBG-2.0`），实测走通；multipart 请求需带 `Date` 头（BOS 要求） |
 | NPC 交互 / 剧情Agent | 不属于本测试床范围 |
 | 文档拼写 | 锚点相关沿用文档原文 `auchor` |
 

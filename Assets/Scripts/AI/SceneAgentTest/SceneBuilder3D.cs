@@ -389,18 +389,21 @@ namespace EpicSpark.AI.SceneAgentTest
     {
         static readonly Dictionary<string, Task<GltfImport>> cache = new Dictionary<string, Task<GltfImport>>();
 
-        public static Task<GltfImport> LoadAsync(string projectRelativePath)
+        public static Task<GltfImport> LoadAsync(string glbPath)
         {
-            if (cache.TryGetValue(projectRelativePath, out var task)) return task;
+            if (cache.TryGetValue(glbPath, out var task)) return task;
 
-            task = LoadInner(projectRelativePath);
-            cache[projectRelativePath] = task;
+            task = LoadInner(glbPath);
+            cache[glbPath] = task;
             return task;
         }
 
-        static async Task<GltfImport> LoadInner(string projectRelativePath)
+        static async Task<GltfImport> LoadInner(string glbPath)
         {
-            string fullPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", projectRelativePath));
+            // 支持两种路径: 工程内相对路径(缓存库模型) 或 绝对路径(运行时生成的模型)
+            string fullPath = Path.IsPathRooted(glbPath)
+                ? glbPath
+                : Path.GetFullPath(Path.Combine(Application.dataPath, "..", glbPath));
             if (!File.Exists(fullPath))
             {
                 Debug.LogWarning("[SceneBuilder3D] GLB 文件不存在: " + fullPath);

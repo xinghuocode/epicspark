@@ -77,6 +77,12 @@ namespace EpicSpark.AI.SceneAgentTest
                 "\"search_word\":{\"type\":\"string\",\"description\":\"搜索关键词, 可为空(返回全部)\"}" +
                 "},\"required\":[\"search_word\"]}"),
 
+            Def("generate_model",
+                "生成新模型(Z-Image-Turbo文生图 → RMBG-2.0去背景 → Hunyuan3D-2图生3D, 耗时可达数分钟)。仅在 search_model 找不到合适模型时使用。成功返回新模型id, 可立即用 place_model 放置。",
+                "{\"type\":\"object\",\"properties\":{" +
+                "\"prompt\":{\"type\":\"string\",\"description\":\"模型生成提示词(建议英文), 描述单个物体, 如 'a wooden medieval barrel, single object, centered, plain white background, product photo'\"}" +
+                "},\"required\":[\"prompt\"]}"),
+
             Def("finish_scene",
                 "完成场景生成。在所有场景元素放置完成后调用; 若锚点未绑定齐、未设置起始点等问题, 会返回错误, 修正后需重新调用。",
                 "{\"type\":\"object\",\"properties\":{}}"),

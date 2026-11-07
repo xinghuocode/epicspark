@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace EpicSpark.AI.SceneAgentTest
@@ -27,6 +29,7 @@ namespace EpicSpark.AI.SceneAgentTest
 
         readonly List<ModelEntry> entries = new List<ModelEntry>();
         readonly Dictionary<string, ModelEntry> byId = new Dictionary<string, ModelEntry>();
+        static int genCounter; // 会话级递增, 避免多次运行生成相同 id 覆盖文件
 
         public static ModelLibrary Load(string path = DefaultLibraryPath)
         {
@@ -76,6 +79,27 @@ namespace EpicSpark.AI.SceneAgentTest
         }
 
         public int Count => entries.Count;
+
+        /// <summary>登记一个生成的新模型(内存库), 返回分配的 id; GLB 存运行时持久化目录(绝对路径)。</summary>
+        public string RegisterGenerated(string prompt, out string glbFullPath)
+        {
+            // 跳过与既有生成 id 冲突
+            string id;
+            do { id = $"mdl_gen_{++genCounter:000}"; } while (byId.ContainsKey(id));
+
+            glbFullPath = Path.Combine(Application.persistentDataPath, "GeneratedModels", id + ".glb");
+            var e = new ModelEntry
+            {
+                id = id,
+                name = "生成模型_" + genCounter,
+                prompt = prompt,
+                category = "generated",
+                glb = glbFullPath,
+            };
+            entries.Add(e);
+            byId[e.id] = e;
+            return id;
+        }
     }
 
     // ============ 场景世界 ============
@@ -109,6 +133,12 @@ namespace EpicSpark.AI.SceneAgentTest
         /// <summary>场景内容发生有效变更(工具调用成功)后触发, SceneBuilder3D 据此重建3D场景。</summary>
         public event Action<SceneWorld> Changed;
 
+        /// <summary>模型生成管线(generate_model 用)。由 Runner 注入; 为空时该工具报错误。</summary>
+        public ModelGenerationPipeline Pipeline;
+
+        /// <summary>供工具汇报长耗时阶段(写日志)。</summary>
+        public Action<string> Info;
+
         // ---- 供 SceneBuilder3D 读取的场景状态 ----
         public bool IsTerrainInitialized => terrainInitialized;
         public IReadOnlyList<Mountain> Mountains => mountains;
@@ -135,7 +165,7 @@ namespace EpicSpark.AI.SceneAgentTest
 
         // ============ 工具入口 ============
 
-        public string ExecuteToolCall(string tool, Dictionary<string, object> args)
+        public async Task<string> ExecuteToolCallAsync(string tool, Dictionary<string, object> args, CancellationToken ct = default)
         {
             string result;
             try
@@ -148,10 +178,11 @@ namespace EpicSpark.AI.SceneAgentTest
                     case "set_auchor_point": result = SetAuchorPoint(args); break;
                     case "set_start_point": result = SetStartPoint(args); break;
                     case "search_model": result = SearchModel(args); break;
+                    case "generate_model": result = await GenerateModel(args, ct); break;
                     case "finish_scene": result = FinishScene(args); break;
                     default:
                         result = $"ERROR: 未知工具 '{tool}'。可用工具: init_terrain, place_model, " +
-                                 "place_bar_shaped_object, set_auchor_point, set_start_point, search_model, finish_scene";
+                                 "place_bar_shaped_object, set_auchor_point, set_start_point, search_model, generate_model, finish_scene";
                         break;
                 }
             }
@@ -275,6 +306,37 @@ namespace EpicSpark.AI.SceneAgentTest
             if (hits.Count == 0)
                 sb.Append("  (无匹配, 可尝试 generate_model 生成新模型)");
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// generate_model (ARCHITECT §4.4 管线): Z-Image-Turbo 文生图 → RMBG-2.0 去背景 →
+        /// Hunyuan3D-2 图生3D。GLB 落盘到运行时持久化目录(persistentDataPath, 不污染开发目录),
+        /// 并登记入模型库, 可立即 place_model。
+        /// </summary>
+        async Task<string> GenerateModel(Dictionary<string, object> args, CancellationToken ct)
+        {
+            string prompt = RequireString(args, "prompt", out string err);
+            if (err != null) return err;
+            if (Pipeline == null)
+                return "ERROR: 模型生成管线未配置(需要网络与 API Key)";
+
+            try
+            {
+                byte[] glb = await Pipeline.GenerateGlbAsync(prompt, s => Info?.Invoke("[generate_model] " + s), ct);
+                if (glb == null || glb.Length < 100)
+                    return "ERROR: 生成的 GLB 文件异常(过小或为空)";
+
+                string id = Library.RegisterGenerated(prompt, out string fullPath);
+                string dir = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                File.WriteAllBytes(fullPath, glb);
+                return $"OK: 模型已生成并入库: id={id}, 提示词='{prompt}'。可立即用 place_model 放置";
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception e)
+            {
+                return "ERROR: 模型生成失败: " + e.Message;
+            }
         }
 
         string FinishScene(Dictionary<string, object> args)
