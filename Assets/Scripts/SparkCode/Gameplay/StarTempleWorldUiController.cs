@@ -13,6 +13,7 @@ namespace SparkCode.Gameplay
     public class StarTempleWorldUiController : MonoBehaviour
     {
         public static bool PointerOverUiThisFrame { get; private set; }
+        public static bool MobileUiOwnsInputThisFrame { get; private set; }
 
         [Header("Scene references")]
         public StarTemplePlayerController player;
@@ -113,6 +114,7 @@ namespace SparkCode.Gameplay
         void OnDisable()
         {
             PointerOverUiThisFrame = false;
+            MobileUiOwnsInputThisFrame = false;
             loreFocused = false;
             loreFocusAmount = 0f;
             focusedLore = null;
@@ -123,6 +125,7 @@ namespace SparkCode.Gameplay
         void Update()
         {
             PointerOverUiThisFrame = false;
+            MobileUiOwnsInputThisFrame = false;
             if (player == null || playerCamera == null || player.IsKeybindingMenuOpen)
             {
                 SetHoveredButton(null);
@@ -138,14 +141,30 @@ namespace SparkCode.Gameplay
 
             Vector2 screenPoint = GetPointerScreenPoint();
 
-            // The exit confirmation is a centered modal. While it is open only its
-            // own two buttons receive input, and the player controller is frozen.
+            // The exit confirmation is a centered modal. Desktop freezes the player;
+            // Android keeps movement active; A confirms exit and B cancels.
             if (exitCanvas != null && exitCanvas.activeSelf)
             {
                 PointerOverUiThisFrame = true;
+                if (MobilePadActive)
+                {
+                    MobileUiOwnsInputThisFrame = true;
+                    if (MobileCancelPressed)
+                    {
+                        HandleAction(StarTempleUiAction.ExitNo);
+                        HideLore();
+                        return;
+                    }
+                    if (MobileConfirmPressed)
+                    {
+                        HandleAction(StarTempleUiAction.ExitYes);
+                        HideLore();
+                        return;
+                    }
+                }
                 var modalHover = FindButton(screenPoint, true);
                 SetHoveredButton(modalHover);
-                bool modalClicked = Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1);
+                bool modalClicked = Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || MobileConfirmPressed;
                 if (modalClicked && modalHover != null) HandleAction(modalHover.action);
                 HideLore();
                 return;
@@ -157,15 +176,26 @@ namespace SparkCode.Gameplay
             // until the player right-clicks it to send it back.
             if (loreFocused || loreFocusAmount > 0f)
             {
+                if (MobilePadActive) MobileUiOwnsInputThisFrame = true;
                 UpdateFocusedLore(screenPoint, overBridge);
                 return;
             }
 
+            bool mobileBridge = MobilePadActive && bridgeCanvas != null && bridgeCanvas.activeSelf;
             PointerOverUiThisFrame = overBridge;
 
             var hover = FindButton(screenPoint);
             SetHoveredButton(hover);
-            bool clicked = Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1);
+            if (mobileBridge)
+            {
+                MobileUiOwnsInputThisFrame = hover != null;
+                if (MobileCancelPressed)
+                {
+                    HandleAction(StarTempleUiAction.Back);
+                    return;
+                }
+            }
+            bool clicked = Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || MobileConfirmPressed;
             if (clicked && hover != null) HandleAction(hover.action);
 
             UpdateLoreGaze(screenPoint, overBridge);
@@ -247,6 +277,7 @@ namespace SparkCode.Gameplay
 
         void OpenExitModal()
         {
+            SetHoveredButton(null);
             if (exitCanvas != null) exitCanvas.SetActive(true);
             if (player != null) player.SetModalFrozen(true);
             Canvas.ForceUpdateCanvases();
@@ -254,6 +285,7 @@ namespace SparkCode.Gameplay
 
         void CloseExitModal()
         {
+            SetHoveredButton(null);
             if (exitCanvas != null) exitCanvas.SetActive(false);
             if (player != null) player.SetModalFrozen(false);
         }
@@ -382,7 +414,13 @@ namespace SparkCode.Gameplay
             bool overCard = Contains(lorePanelRect, screenPoint);
             PointerOverUiThisFrame = overBridge || overCard;
 
-            if (loreFocused && overCard && Input.GetMouseButtonDown(1))
+            if (loreFocused && MobileCancelPressed)
+            {
+                EndLoreFocus();
+                return;
+            }
+
+            if (loreFocused && overCard && (Input.GetMouseButtonDown(1) || MobileInteractPressed))
             {
                 EndLoreFocus();
                 return;
@@ -394,6 +432,15 @@ namespace SparkCode.Gameplay
                 HideLore();
             }
         }
+
+        StarTempleMobileGamepad MobilePad
+        {
+            get { return StarTempleMobileGamepad.Active ? StarTempleMobileGamepad.Instance : null; }
+        }
+        bool MobilePadActive { get { return MobilePad != null; } }
+        bool MobileConfirmPressed { get { return MobilePadActive && MobilePad.ConfirmPressed; } }
+        bool MobileInteractPressed { get { return MobilePadActive && MobilePad.InteractPressed; } }
+        bool MobileCancelPressed { get { return MobilePadActive && MobilePad.CancelPressed; } }
 
         static float FlatDistance(Vector3 a, Vector3 b)
         {
@@ -459,7 +506,7 @@ namespace SparkCode.Gameplay
             loreCanvas.transform.position = pointPosition + offset;
             FaceTowardCamera(loreCanvas.transform);
 
-            if (Input.GetMouseButtonDown(1))
+            if (Input.GetMouseButtonDown(1) || MobileInteractPressed)
             {
                 BeginLoreFocus(found);
                 // Consume this click so the player does not also interact/attack.

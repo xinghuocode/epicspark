@@ -78,19 +78,6 @@ namespace SparkCode.Generation
                     Debug.LogError("[TempleSceneBuilder] Failed to save scene to " + TempleLayout.StartScenePath);
                 }
 
-                var buildScenes = new List<EditorBuildSettingsScene>
-                {
-                    new EditorBuildSettingsScene(TempleLayout.StartScenePath, true)
-                };
-                foreach (var s in EditorBuildSettings.scenes)
-                {
-                    if (s.path != TempleLayout.StartScenePath)
-                    {
-                        buildScenes.Add(new EditorBuildSettingsScene(s.path, false));
-                    }
-                }
-                EditorBuildSettings.scenes = buildScenes.ToArray();
-
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 

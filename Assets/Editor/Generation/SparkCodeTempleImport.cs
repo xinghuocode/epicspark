@@ -113,7 +113,7 @@ namespace SparkCode.Generation
                 bool saved = EditorSceneManager.SaveScene(scene, ScenePath);
                 if (!saved) throw new InvalidOperationException("Failed to save " + ScenePath);
 
-                AddSceneToBuildSettings(ScenePath);
+                // Development preview only; the supported entry scene is configured by StarTempleEntryScene.
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
@@ -707,7 +707,7 @@ namespace SparkCode.Generation
             bloom.scatter.Override(0.72f);
             bloom.tint.Override(new Color(1f, 0.83f, 0.54f, 1f));
             bloom.highQualityFiltering.Override(true);
-            bloom.skipIterations.Override(1);
+            bloom.maxIterations.Override(6);
 
             var vignette = Add<Vignette>(profile);
             vignette.intensity.Override(0.33f);
@@ -931,14 +931,6 @@ namespace SparkCode.Generation
             if (!string.IsNullOrEmpty(parent) && !AssetDatabase.IsValidFolder(parent))
                 EnsureFolder(parent);
             AssetDatabase.CreateFolder(parent, Path.GetFileName(path));
-        }
-
-        static void AddSceneToBuildSettings(string scenePath)
-        {
-            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-            if (scenes.Any(s => s.path == scenePath)) return;
-            scenes.Add(new EditorBuildSettingsScene(scenePath, false));
-            EditorBuildSettings.scenes = scenes.ToArray();
         }
 
         static void LogStats()

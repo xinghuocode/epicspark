@@ -72,7 +72,7 @@ namespace SparkCode.Generation
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene, ScenePath))
                     throw new InvalidOperationException("Could not save " + ScenePath);
-                AddSceneToBuildSettings();
+                // Source/preview scene only; do not add it to the player build.
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
                 ValidateScene();
@@ -630,14 +630,6 @@ namespace SparkCode.Generation
             File.WriteAllText("Docs/BlenderStarTemple_UnityValidation.json", JsonUtility.ToJson(report, true));
             Debug.Log("[StarTempleURP] VALIDATION " + JsonUtility.ToJson(report));
             if (!report.passed) throw new InvalidOperationException("Scene validation failed; see Docs/BlenderStarTemple_UnityValidation.json");
-        }
-
-        static void AddSceneToBuildSettings()
-        {
-            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-            if (scenes.Any(s => s.path == ScenePath)) return;
-            scenes.Add(new EditorBuildSettingsScene(ScenePath, false));
-            EditorBuildSettings.scenes = scenes.ToArray();
         }
 
         static void EnsureFolder(string path)

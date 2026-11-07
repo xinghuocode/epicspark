@@ -38,7 +38,7 @@ namespace SparkCode.Generation
             bloom.scatter.Override(0.72f);
             bloom.tint.Override(new Color(1f, 0.86f, 0.62f, 1f));
             bloom.highQualityFiltering.Override(true);
-            bloom.skipIterations.Override(1);
+            bloom.maxIterations.Override(6);
 
             var vignette = Add<Vignette>(profile);
             vignette.intensity.Override(0.3f);

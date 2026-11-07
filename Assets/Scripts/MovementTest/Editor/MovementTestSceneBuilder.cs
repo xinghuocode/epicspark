@@ -58,26 +58,11 @@ namespace EpicSpark.MovementTest.EditorTools
             light.intensity = 1.2f;
             lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
-            // ---- 保存场景并加入 Build Settings ----
+            // ---- 保存开发测试场景；不要污染游戏发布入口 ----
             EditorSceneManager.SaveScene(scene, ScenePath);
-            AddSceneToBuildSettings(ScenePath);
-
             Selection.activeGameObject = player;
             EditorGUIUtility.PingObject(player);
             Debug.Log($"[MovementTest] 场景已构建并保存到 {ScenePath}。点击 Play 后 WASD/摇杆移动,空格/手柄确认键跳跃。");
-        }
-
-        private static void AddSceneToBuildSettings(string path)
-        {
-            var scenes = EditorBuildSettings.scenes;
-            foreach (var s in scenes)
-                if (s.path == path) return;
-
-            var list = new System.Collections.Generic.List<EditorBuildSettingsScene>(scenes)
-            {
-                new EditorBuildSettingsScene(path, true)
-            };
-            EditorBuildSettings.scenes = list.ToArray();
         }
     }
 }

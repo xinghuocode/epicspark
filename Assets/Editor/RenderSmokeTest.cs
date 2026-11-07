@@ -9,7 +9,7 @@ namespace SparkCode.EditorTools
     {
         public static void Capture()
         {
-            EditorSceneManager.OpenScene("Assets/Scenes/SampleScene.unity");
+            EditorSceneManager.OpenScene(SparkCode.Generation.StarTempleEntryScene.ScenePath);
             var camGo = new GameObject("SmokeCam");
             var cam = camGo.AddComponent<Camera>();
             cam.transform.position = new Vector3(0f, 3f, -10f);

@@ -103,9 +103,14 @@ namespace SparkCode.Gameplay
         public bool IsKeybindingMenuOpen { get { return showBindings; } }
         public bool IsModalFrozen { get { return modalFrozen; } }
         public IReadOnlyDictionary<StarAction, KeyCode> Bindings { get { return bindings; } }
+        StarTempleMobileGamepad MobilePad { get { return StarTempleMobileGamepad.Active ? StarTempleMobileGamepad.Instance : null; } }
+        bool MobileUiOwnsInput { get { return MobilePad != null && StarTempleWorldUiController.MobileUiOwnsInputThisFrame; } }
 
         void Awake()
         {
+            if (Application.platform == RuntimePlatform.Android && GetComponent<StarTempleMobileGamepad>() == null)
+                gameObject.AddComponent<StarTempleMobileGamepad>();
+
             controller = GetComponent<CharacterController>();
             if (playerCamera == null) playerCamera = GetComponentInChildren<Camera>(true);
             if (attackTrace == null) attackTrace = GetComponentInChildren<LineRenderer>(true);
@@ -128,6 +133,7 @@ namespace SparkCode.Gameplay
 
         void OnDisable()
         {
+            if (Application.platform == RuntimePlatform.Android) return;
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
         }
@@ -139,9 +145,16 @@ namespace SparkCode.Gameplay
 
         void Update()
         {
-            // A centered modal (for example the exit confirmation) freezes movement,
-            // look, jump, interaction and hotkeys until it is closed.
-            if (modalFrozen) return;
+            // Desktop keeps the original modal freeze. On Android the same panel
+            // remains gyro-aimable and allows movement, matching the other UI.
+            if (modalFrozen && MobilePad == null) return;
+            if (modalFrozen)
+            {
+                Look();
+                UpdateCrouch();
+                UpdateMovement();
+                return;
+            }
             if (Time.frameCount <= suppressInputUntilFrame) return;
             if (waitingAction.HasValue) return;
 
@@ -158,9 +171,10 @@ namespace SparkCode.Gameplay
             UpdateCrouch();
             UpdateMovement();
 
-            bool uiConsumesClick = showBindings || StarTempleWorldUiController.PointerOverUiThisFrame;
-            if (!uiConsumesClick && Pressed(StarAction.Attack)) DoAttack();
-            if (!uiConsumesClick && Pressed(StarAction.Interact)) DoInteract();
+            bool uiConsumesClick = showBindings || StarTempleWorldUiController.PointerOverUiThisFrame || MobileUiOwnsInput;
+            var pad = MobilePad;
+            if (!uiConsumesClick && (Pressed(StarAction.Attack) || (pad != null && pad.AttackPressed))) DoAttack();
+            if (!uiConsumesClick && (Pressed(StarAction.Interact) || (pad != null && pad.InteractPressed))) DoInteract();
 
             if (attackTrace != null && attackTrace.enabled && Time.time >= traceUntil)
                 attackTrace.enabled = false;
@@ -169,15 +183,24 @@ namespace SparkCode.Gameplay
         void Look()
         {
             if (playerCamera == null) return;
-            float yaw = transform.eulerAngles.y + Input.GetAxisRaw("Mouse X") * mouseSensitivity;
-            pitch = Mathf.Clamp(pitch - Input.GetAxisRaw("Mouse Y") * mouseSensitivity, -85f, 85f);
+            float yawDelta = Input.GetAxisRaw("Mouse X") * mouseSensitivity;
+            float pitchDelta = Input.GetAxisRaw("Mouse Y") * mouseSensitivity;
+            var pad = MobilePad;
+            if (pad != null)
+            {
+                yawDelta += pad.Look.x * Time.deltaTime;
+                pitchDelta += pad.Look.y * Time.deltaTime;
+            }
+            float yaw = transform.eulerAngles.y + yawDelta;
+            pitch = Mathf.Clamp(pitch - pitchDelta, -85f, 85f);
             transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             playerCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
         }
 
         void UpdateCrouch()
         {
-            bool wantsCrouch = Held(StarAction.Crouch);
+            var pad = MobilePad;
+            bool wantsCrouch = Held(StarAction.Crouch) || (pad != null && pad.CrouchHeld);
             if (wantsCrouch)
             {
                 crouched = true;
@@ -213,11 +236,12 @@ namespace SparkCode.Gameplay
 
         void UpdateMovement()
         {
+            var pad = MobilePad;
             bool grounded = controller.isGrounded;
             if (grounded)
             {
                 if (verticalVelocity < 0f) verticalVelocity = -2f;
-                if (Pressed(StarAction.Jump))
+                if (Pressed(StarAction.Jump) || (pad != null && pad.JumpPressed && !MobileUiOwnsInput))
                 {
                     if (crouched)
                     {
@@ -235,10 +259,16 @@ namespace SparkCode.Gameplay
 
             float horizontal = (Held(StarAction.Right) ? 1f : 0f) - (Held(StarAction.Left) ? 1f : 0f);
             float vertical = (Held(StarAction.Forward) ? 1f : 0f) - (Held(StarAction.Back) ? 1f : 0f);
+            if (pad != null)
+            {
+                horizontal += pad.Move.x;
+                vertical += pad.Move.y;
+            }
             Vector3 input = transform.right * horizontal + transform.forward * vertical;
             if (input.sqrMagnitude > 1f) input.Normalize();
 
-            float speed = crouched ? crouchSpeed : (Held(StarAction.Sprint) ? sprintSpeed : walkSpeed);
+            bool sprinting = Held(StarAction.Sprint) || (pad != null && pad.SprintHeld);
+            float speed = crouched ? crouchSpeed : (sprinting ? sprintSpeed : walkSpeed);
             Vector3 motion = input * speed + Vector3.up * verticalVelocity;
             controller.Move(motion * Time.deltaTime);
 
@@ -272,11 +302,11 @@ namespace SparkCode.Gameplay
                 var damageable = hit.collider.GetComponentInParent<IStarTempleDamageable>();
                 if (damageable != null) damageable.TakeDamage(attackDamage, this, hit);
                 if (AttackHit != null) AttackHit(hit, attackDamage);
-                Notice(damageable != null ? "左键攻击命中：" + hit.collider.name : "左键攻击：命中 " + hit.collider.name);
+                Notice(damageable != null ? "攻击命中：" + hit.collider.name : "攻击：命中 " + hit.collider.name);
             }
             else
             {
-                Notice("左键攻击：未命中");
+                Notice("攻击：未命中");
             }
 
             if (attackTrace != null)
@@ -307,12 +337,12 @@ namespace SparkCode.Gameplay
                 }
                 else
                 {
-                    Notice("右键交互：" + hit.collider.name + " 没有交互功能");
+                    Notice("交互：" + hit.collider.name + " 没有交互功能");
                 }
             }
             else
             {
-                Notice("右键交互：未找到目标");
+                Notice("交互：未找到目标");
             }
         }
 
@@ -368,6 +398,13 @@ namespace SparkCode.Gameplay
 
         void SetCursorVisible(bool visible)
         {
+            if (Application.platform == RuntimePlatform.Android)
+            {
+                cursorVisible = false;
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.None;
+                return;
+            }
             cursorVisible = visible;
             Cursor.visible = visible;
             Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
@@ -602,23 +639,34 @@ namespace SparkCode.Gameplay
             GUI.color = oldColor;
 
             GUI.Label(new Rect(24f, 20f, 920f, 38f), "星火神殿 · 第一人称", titleStyle);
-            GUI.Label(new Rect(24f, 62f, 1500f, 34f),
-                "移动 [" + ShortKey(StarAction.Forward) + ShortKey(StarAction.Left) + ShortKey(StarAction.Back) + ShortKey(StarAction.Right) + "]" +
-                "  跳跃 [" + ShortKey(StarAction.Jump) + "]" +
-                "  蹲下 [" + ShortKey(StarAction.Crouch) + "]" +
-                "  疾跑 [" + ShortKey(StarAction.Sprint) + "]" +
-                "  鼠标 [" + ShortKey(StarAction.Cursor) + "]" +
-                "  攻击 [" + ShortKey(StarAction.Attack) + "]" +
-                "  交互 [" + ShortKey(StarAction.Interact) + "]",
-                hudStyle);
-            GUI.Label(new Rect(24f, 96f, 1500f, 30f),
-                cursorVisible ? "鼠标已呼出：左键攻击 / 右键交互仍然有效 · F1 修改键位" : "按 " + ShortKey(StarAction.Cursor) + " 呼出鼠标 · F1 修改键位",
-                hudStyle);
+            var mobilePad = MobilePad;
+            if (mobilePad != null)
+            {
+                GUI.Label(new Rect(24f, 62f, 1800f, 34f),
+                    mobilePad.SingleStickDevice
+                        ? "SC-B03 摇杆 移动 · 陀螺仪 视角 · A 跳跃/确认 · X 攻击 · B/Y 交互 · 确定键 疾跑"
+                        : "左摇杆 移动 · 陀螺仪 视角 · A 跳跃/确认 · X/RT 攻击 · Y/LT 交互 · LB 疾跑 · B/RB 蹲下", hudStyle);
+                GUI.Label(new Rect(24f, 96f, 1800f, 30f),
+                    "手柄：" + mobilePad.DeviceName + (mobilePad.GyroAvailable ? " · 陀螺仪已启用" : " · 陀螺仪不可用"), hudStyle);
+            }
+            else
+            {
+                GUI.Label(new Rect(24f, 62f, 1500f, 34f),
+                    "移动 [" + ShortKey(StarAction.Forward) + ShortKey(StarAction.Left) + ShortKey(StarAction.Back) + ShortKey(StarAction.Right) + "]" +
+                    "  跳跃 [" + ShortKey(StarAction.Jump) + "]" +
+                    "  蹲下 [" + ShortKey(StarAction.Crouch) + "]" +
+                    "  疾跑 [" + ShortKey(StarAction.Sprint) + "]" +
+                    "  鼠标 [" + ShortKey(StarAction.Cursor) + "]" +
+                    "  攻击 [" + ShortKey(StarAction.Attack) + "]" +
+                    "  交互 [" + ShortKey(StarAction.Interact) + "]", hudStyle);
+                GUI.Label(new Rect(24f, 96f, 1500f, 30f),
+                    cursorVisible ? "鼠标已呼出：左键攻击 / 右键交互仍然有效 · F1 修改键位" : "按 " + ShortKey(StarAction.Cursor) + " 呼出鼠标 · F1 修改键位", hudStyle);
+            }
 
             if (!string.IsNullOrEmpty(notice) && Time.time < noticeUntil)
                 GUI.Label(new Rect(360f, 140f, 1200f, 44f), notice, noticeStyle);
 
-            if (cursorVisible && !showBindings)
+            if (cursorVisible && !showBindings && MobilePad == null)
             {
                 if (GUI.Button(new Rect(1610f, 24f, 286f, 46f), "键位设置  [F1]", keyStyle))
                     OpenBindings();

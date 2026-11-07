@@ -13,13 +13,12 @@ using UnityEngine.SceneManagement;
 namespace SparkCode.Generation
 {
     /// <summary>
-    /// Creates a gameplay copy of the URP temple, adds the first-person controller,
-    /// a player camera and a test interaction target on the star.
+    /// Configures the final gameplay scene with the first-person controller,
+    /// player camera, star interaction and world UI.
     /// </summary>
     public static class StarTempleGameplaySetup
     {
-        public const string SourceScene = "Assets/Scenes/BlenderStarTemple_URP.unity";
-        public const string GameplayScene = "Assets/Scenes/BlenderStarTemple_Gameplay.unity";
+        public const string GameplayScene = StarTempleEntryScene.ScenePath;
         const string Generated = "Assets/Generated/BlenderStarTempleURP";
         public const string PlayerName = "StarTemple_Player";
         static readonly Vector3 SpawnPosition = new Vector3(0f, 0.25f, 10.2f);
@@ -36,19 +35,13 @@ namespace SparkCode.Generation
             try
             {
                 if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-                if (!File.Exists(SourceScene))
-                    throw new InvalidOperationException("Source scene missing: " + SourceScene);
+                if (!File.Exists(GameplayScene))
+                    throw new InvalidOperationException("Gameplay scene missing: " + GameplayScene);
 
                 int quality = ShaderPreviewTest.FindQuality("High Fidelity");
                 if (quality >= 0) QualitySettings.SetQualityLevel(quality, true);
                 EnsureFolder(Generated);
 
-                var source = EditorSceneManager.OpenScene(SourceScene, OpenSceneMode.Single);
-                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(GameplayScene) != null)
-                    AssetDatabase.DeleteAsset(GameplayScene);
-                if (!EditorSceneManager.SaveScene(source, GameplayScene))
-                    throw new InvalidOperationException("Could not create gameplay scene copy");
-                AssetDatabase.Refresh();
                 var scene = EditorSceneManager.OpenScene(GameplayScene, OpenSceneMode.Single);
 
                 ConfigureShowcaseScene();
@@ -64,7 +57,7 @@ namespace SparkCode.Generation
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene, GameplayScene))
                     throw new InvalidOperationException("Could not save " + GameplayScene);
-                AddSceneToBuildSettings();
+                StarTempleEntryScene.Configure();
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
                 Validate();
@@ -368,14 +361,6 @@ namespace SparkCode.Generation
             UnityEngine.Object.DestroyImmediate(rt);
             UnityEngine.Object.DestroyImmediate(texture);
             Debug.Log("[StarTempleGameplay] screenshot " + path);
-        }
-
-        static void AddSceneToBuildSettings()
-        {
-            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-            scenes.RemoveAll(s => s.path == GameplayScene);
-            scenes.Add(new EditorBuildSettingsScene(GameplayScene, false));
-            EditorBuildSettings.scenes = scenes.ToArray();
         }
 
         static void EnsureFolder(string path)
