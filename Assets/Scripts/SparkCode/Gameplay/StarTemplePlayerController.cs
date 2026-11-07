@@ -174,7 +174,8 @@ namespace SparkCode.Gameplay
             UpdateMovement();
 
             bool uiConsumesClick = showBindings || StarTempleWorldUiController.PointerOverUiThisFrame ||
-                                       StarTempleVrController.PointerOverUiThisFrame || MobileUiOwnsInput;
+                                       StarTempleVrController.PointerOverUiThisFrame || MobileUiOwnsInput ||
+                                       StarTempleVrController.CalibrationPatternActive;
             var pad = MobilePad;
             if (!uiConsumesClick && (Pressed(StarAction.Attack) || (pad != null && pad.AttackPressed))) DoAttack();
             if (!uiConsumesClick && (Pressed(StarAction.Interact) || (pad != null && pad.InteractPressed))) DoInteract();
@@ -244,7 +245,9 @@ namespace SparkCode.Gameplay
             if (grounded)
             {
                 if (verticalVelocity < 0f) verticalVelocity = -2f;
-                if (Pressed(StarAction.Jump) || (pad != null && pad.JumpPressed && !MobileUiOwnsInput))
+                // VR 弹窗（选型号/戴盒确认）打开时，手柄 A 用于确认进入 VR，不得触发跳跃。
+                bool vrPromptOpen = StarTempleVrController.PointerOverUiThisFrame;
+                if (!vrPromptOpen && (Pressed(StarAction.Jump) || (pad != null && pad.JumpPressed && !MobileUiOwnsInput)))
                 {
                     if (crouched)
                     {
@@ -267,7 +270,25 @@ namespace SparkCode.Gameplay
                 horizontal += pad.Move.x;
                 vertical += pad.Move.y;
             }
-            Vector3 input = transform.right * horizontal + transform.forward * vertical;
+            // VR 准星调整模式下摇杆用于移动准星，屏蔽角色移动（跳跃/攻击已屏蔽）
+            if (StarTempleVrController.ReticleAdjustModeActive)
+            {
+                horizontal = 0f;
+                vertical = 0f;
+            }
+            // 移动基准：非 VR 用身体朝向（视线与身体始终一致）；
+            // VR 下头部转动只驱动物理相机、身体不转，因此改用相机的水平朝向，
+            // 保证"摇杆前推 = 朝视线方向走"，与非 VR 的体感保持一致。
+            Transform moveBasis = transform;
+            if (StarTempleVrController.IsCardboardActive && playerCamera != null)
+                moveBasis = playerCamera.transform;
+            Vector3 forwardFlat = moveBasis.forward;
+            forwardFlat.y = 0f;
+            forwardFlat.Normalize();
+            Vector3 rightFlat = moveBasis.right;
+            rightFlat.y = 0f;
+            rightFlat.Normalize();
+            Vector3 input = rightFlat * horizontal + forwardFlat * vertical;
             if (input.sqrMagnitude > 1f) input.Normalize();
 
             bool sprinting = Held(StarAction.Sprint) || (pad != null && pad.SprintHeld);

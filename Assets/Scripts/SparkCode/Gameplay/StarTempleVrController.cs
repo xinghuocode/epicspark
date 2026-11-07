@@ -2,9 +2,8 @@ using System;
 using System.Collections;
 using Google.XR.Cardboard;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.XR;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.XR.Management;
 
 namespace SparkCode.Gameplay
@@ -18,10 +17,46 @@ namespace SparkCode.Gameplay
     {
         public static bool PointerOverUiThisFrame { get; private set; }
         public static bool IsCardboardActive { get; private set; }
+        /// <summary>VR 校准模式激活中（画面叠加测试图与 16 宫格高亮面板）。</summary>
+        public static bool CalibrationPatternActive { get; private set; }
 
-        private const string DefaultViewerUri = "https://g.co/cardboard";
-        private const float CalibrationDuration = 1.2f;
+        /// <summary>
+        /// 准星偏移（归一化）：x 以单眼半屏宽为单位，y 以整屏高为单位。
+        /// 由玩家在 VR 校准模式中按 X 键进入调整模式后用摇杆实测对准高亮块得到，
+        /// 持久化到 PlayerPrefs；绘制准星时叠加，使准星与真实视口中心射线一致。
+        /// </summary>
+        public static Vector2 GazeOffsetNorm => gazeOffsetNorm;
+        static Vector2 gazeOffsetNorm;
+
+        /// <summary>准星调整模式激活中：玩家移动输入被屏蔽，防止摇杆同时移动角色破坏对位。</summary>
+        public static bool ReticleAdjustModeActive { get; private set; }
+
+        // VR 校准模式的 16 宫格面板（世界锚定 uGUI 画布，退出时销毁）。
+        // 渲染与悬停高亮完全复用开始面板（bridge UI）的机制：世界空间 Canvas +
+        // Image + RectangleContainsScreenPoint(屏幕中心, 相机)，VR 下已被验证可行。
+        const int GridCellsPerRow = 8;
+        const float GridCellSize = 0.2f;
+        const float GridCellGap = 0.018f;
+        const float ReticleAdjustSpeed = 0.2f;
+        const float ReticleAdjustRange = 0.25f;
+        GameObject calibrationPanel;
+        RectTransform[] calibrationCells;
+        RectTransform calibrationHighlightRect;
+        GameObject calibrationHighlight;
+        bool reticleAdjustMode;
+
+        // VR SHINECON 官方 Viewer Profile（Shinecon 官网 QR 码解析所得）。
+        // Cardboard SDK 的 SaveDeviceParams 仅支持 HTTPS URI，故使用 https 形式。
+        // 注意：G04 与 G05 Pro 的光学参数字节完全一致（厂商复用默认值），仅型号名不同。
+        static readonly (string name, string uri)[] SupportedViewers =
+        {
+            ("VR SHINECON G05 Pro",
+             "https://google.com/cardboard/cfg?p=CghTaGluZWNvbhIDRzA1HexROD0ltvN9PSoQAABIQgAASEIAAEhCAABIQlgANbbz_Tw6CPCnBj_jpRu-UABgAA"),
+            ("VR SHINECON G04",
+             "https://google.com/cardboard/cfg?p=CghTaGluZWNvbhIDRzA0HexROD0ltvN9PSoQAABIQgAASEIAAEhCAABIQlgANbbz_Tw6CPCnBj_jpRu-UABgAA"),
+        };
         private static readonly Rect ToggleRect = new Rect(1610f, 24f, 286f, 52f);
+        private static readonly Rect CalibrateRect = new Rect(1610f, 88f, 286f, 52f);
         private static readonly Rect DialogRect = new Rect(560f, 220f, 800f, 620f);
 
         enum UiState
@@ -29,8 +64,7 @@ namespace SparkCode.Gameplay
             Hidden,
             Initializing,
             ProfileRequired,
-            AwaitFlatConfirmation,
-            Calibrating,
+            AwaitHeadConfirm,
             Error
         }
 
@@ -43,9 +77,11 @@ namespace SparkCode.Gameplay
         Transform trackingReference;
         UiState uiState;
         string errorMessage = string.Empty;
-        float calibrationProgress;
         bool loaderReady;
-        bool waitingForProfileScan;
+        bool pendingCalibrationPattern;
+        // 戴盒确认（AwaitHeadConfirm）的静止自动校准状态
+        float headConfirmStartTime = -1f;
+        float stillnessAccum;
 
         Transform normalParent;
         Vector3 normalLocalPosition;
@@ -53,14 +89,6 @@ namespace SparkCode.Gameplay
         float normalFieldOfView;
         float normalAspect;
         Rect normalRect;
-
-        UniversalAdditionalCameraData cameraData;
-        UniversalRenderPipelineAsset urpAsset;
-        bool performanceCaptured;
-        bool normalPostProcessing;
-        float normalRenderScale;
-        int normalVsyncCount;
-        int normalTargetFrameRate;
 
         GUIStyle titleStyle;
         GUIStyle bodyStyle;
@@ -85,10 +113,17 @@ namespace SparkCode.Gameplay
                 return;
             }
 
-            cameraData = CenterCamera.GetComponent<UniversalAdditionalCameraData>();
-            urpAsset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
             trackedPose = CenterCamera.GetComponent<TrackedPoseDriver>();
             if (trackedPose == null) trackedPose = CenterCamera.gameObject.AddComponent<TrackedPoseDriver>();
+            // 运行时 AddComponent 不会触发编辑器专属的 Reset()，默认 Action 没有任何
+            // Binding，TrackedPoseDriver 将永远收不到 XRHMD 数据（表现为陀螺仪无效）。
+            // 因此这里显式指定与官方 HelloCardboard 样例等价的 XRHMD 绑定。
+            trackedPose.positionInput = new InputActionProperty(
+                new InputAction("Position", InputActionType.Value, binding: "<XRHMD>/centerEyePosition"));
+            trackedPose.rotationInput = new InputActionProperty(
+                new InputAction("Rotation", InputActionType.Value, binding: "<XRHMD>/centerEyeRotation"));
+            // 与官方样例一致，不显式绑定 trackingState：未绑定时按"始终有效"处理，
+            // 避免设备启动初期短暂报告 None 导致姿态被忽略。
             trackedPose.trackingType = TrackedPoseDriver.TrackingType.RotationOnly;
             trackedPose.updateType = TrackedPoseDriver.UpdateType.UpdateAndBeforeRender;
             trackedPose.enabled = false;
@@ -100,27 +135,212 @@ namespace SparkCode.Gameplay
             trackingReference.localRotation = Quaternion.identity;
 
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
+            gazeOffsetNorm = new Vector2(PlayerPrefs.GetFloat("vrGazeOffsetX", 0f),
+                                         PlayerPrefs.GetFloat("vrGazeOffsetY", 0f));
             var worldUi = FindObjectOfType<StarTempleWorldUiController>();
             if (worldUi != null) uiFont = worldUi.uiFont;
         }
 
         void Update()
         {
-            PointerOverUiThisFrame = uiState != UiState.Hidden || PointerOver(ToggleRect);
+            // VR 模式下不自绘按钮（见 OnGUI），原生控件区域不参与 UI 指针判定。
+            PointerOverUiThisFrame = uiState != UiState.Hidden || (!IsVrMode && PointerOver(ToggleRect));
             if (!loaderReady) return;
 
             if (Api.HasNewDeviceParams()) Api.ReloadDeviceParams();
             Api.UpdateScreenParams();
 
             if (IsVrMode && Api.IsCloseButtonPressed) ExitVrMode();
-            if (Api.IsGearButtonPressed) StartCoroutine(ScanViewerProfile());
 
-            if (waitingForProfileScan && Api.HasNewDeviceParams())
+            if (IsVrMode && CalibrationPatternActive)
             {
-                waitingForProfileScan = false;
-                Api.ReloadDeviceParams();
-                uiState = UiState.AwaitFlatConfirmation;
+                UpdateCalibrationGrid();
+                UpdateReticleAdjust();
+                // B 键：结束校准，直接进入普通 VR 模式
+                if (mobileInput != null && mobileInput.CancelPressed)
+                    ExitCalibrationPattern();
             }
+
+            if (!IsVrMode && uiState == UiState.AwaitHeadConfirm)
+                UpdateHeadConfirm();
+        }
+
+        /// <summary>
+        /// 生成校准面板：4×4 共 16 格，位于进入校准模式时视线正前方正中，面向玩家。
+        /// 使用与开始面板（bridge UI）相同的世界空间 Canvas + Image 体系，
+        /// 渲染与坐标换算在 VR 下已被验证可行。
+        /// </summary>
+        void BuildCalibrationPanel()
+        {
+            DestroyCalibrationPanel();
+            if (CenterCamera == null) return;
+            Transform cam = CenterCamera.transform;
+            calibrationPanel = new GameObject("VRCalibrationGrid", typeof(RectTransform), typeof(Canvas), typeof(UnityEngine.UI.Image));
+            Vector3 forwardFlat = cam.forward;
+            forwardFlat.y = 0f;
+            if (forwardFlat.sqrMagnitude < 0.001f) forwardFlat = Vector3.forward;
+            forwardFlat.Normalize();
+            // 整板约 2.3 m 见方，距离取 2.6 m 保证完整落入视野
+            calibrationPanel.transform.position =
+                cam.position + forwardFlat * 2.6f + Vector3.down * 0.1f;
+            calibrationPanel.transform.rotation =
+                Quaternion.LookRotation(calibrationPanel.transform.position - cam.position, Vector3.up);
+
+            var canvas = calibrationPanel.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.worldCamera = CenterCamera;
+            // 画布背景块：半透明深底，衬托宫格
+            var bg = calibrationPanel.GetComponent<UnityEngine.UI.Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.35f);
+            float step = GridCellSize + GridCellGap;
+            float panelExtent = (GridCellsPerRow - 1) * 0.5f * step + GridCellSize * 0.5f;
+            var canvasRt = (RectTransform)calibrationPanel.transform;
+            canvasRt.sizeDelta = new Vector2(panelExtent * 2f + GridCellGap * 2f,
+                                             panelExtent * 2f + GridCellGap * 2f);
+
+            calibrationCells = new RectTransform[GridCellsPerRow * GridCellsPerRow];
+            for (int row = 0; row < GridCellsPerRow; row++)
+            {
+                for (int col = 0; col < GridCellsPerRow; col++)
+                {
+                    var cellGo = new GameObject($"Cell_{row}_{col}",
+                        typeof(RectTransform), typeof(UnityEngine.UI.Image));
+                    cellGo.transform.SetParent(calibrationPanel.transform, false);
+                    var crt = (RectTransform)cellGo.transform;
+                    crt.sizeDelta = new Vector2(GridCellSize, GridCellSize);
+                    crt.anchoredPosition =
+                        new Vector2((col - (GridCellsPerRow - 1) * 0.5f) * step,
+                                    (row - (GridCellsPerRow - 1) * 0.5f) * step);
+                    cellGo.GetComponent<UnityEngine.UI.Image>().color = new Color(1f, 1f, 1f, 0.5f);
+                    calibrationCells[row * GridCellsPerRow + col] = crt;
+                }
+            }
+
+            var hiGo = new GameObject("Highlight", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            hiGo.transform.SetParent(calibrationPanel.transform, false);
+            calibrationHighlightRect = (RectTransform)hiGo.transform;
+            calibrationHighlightRect.sizeDelta = new Vector2(GridCellSize, GridCellSize);
+            hiGo.GetComponent<UnityEngine.UI.Image>().color = new Color(1f, 0.85f, 0.2f, 0.95f);
+            calibrationHighlight = hiGo;
+            hiGo.SetActive(false);
+        }
+
+        void DestroyCalibrationPanel()
+        {
+            if (calibrationPanel != null) Destroy(calibrationPanel);
+            calibrationPanel = null;
+            calibrationCells = null;
+            calibrationHighlightRect = null;
+            calibrationHighlight = null;
+        }
+
+        /// <summary>
+        /// 高亮交互逻辑与开始面板（bridge UI）完全同构：指针取屏幕中心，
+        /// 用 RectTransformUtility.RectangleContainsScreenPoint 逐个判定格子，
+        /// 命中项激活黄色高亮块（等效于 SetHoveredButton 的换色反馈）。
+        /// </summary>
+        void UpdateCalibrationGrid()
+        {
+            if (calibrationPanel == null || CenterCamera == null || calibrationHighlight == null) return;
+            Vector2 pointer = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+            RectTransform hit = null;
+            for (int i = 0; i < calibrationCells.Length; i++)
+            {
+                var cell = calibrationCells[i];
+                if (cell == null) continue;
+                if (RectTransformUtility.RectangleContainsScreenPoint(cell, pointer, CenterCamera))
+                {
+                    hit = cell;
+                    break;
+                }
+            }
+            if (hit != null)
+            {
+                calibrationHighlightRect.anchoredPosition = hit.anchoredPosition;
+                calibrationHighlight.SetActive(true);
+            }
+            else
+            {
+                calibrationHighlight.SetActive(false);
+            }
+        }
+
+        /// <summary>结束校准模式并进入普通 VR 模式；若有未保存的准星偏移则先保存。</summary>
+        void ExitCalibrationPattern()
+        {
+            if (reticleAdjustMode)
+            {
+                PlayerPrefs.SetFloat("vrGazeOffsetX", gazeOffsetNorm.x);
+                PlayerPrefs.SetFloat("vrGazeOffsetY", gazeOffsetNorm.y);
+            }
+            reticleAdjustMode = false;
+            ReticleAdjustModeActive = false;
+            CalibrationPatternActive = false;
+            DestroyCalibrationPanel();
+        }
+
+        /// <summary>
+        /// X 键切换准星调整模式：进入后推左摇杆移动准星（屏幕偏移），
+        /// 对准黄色高亮块后再按 X 保存到 PlayerPrefs 并退出调整模式。
+        /// </summary>
+        void UpdateReticleAdjust()
+        {
+            var pad = mobileInput;
+            if (pad == null) return;
+            if (pad.AttackPressed)
+            {
+                reticleAdjustMode = !reticleAdjustMode;
+                ReticleAdjustModeActive = reticleAdjustMode;
+                if (reticleAdjustMode)
+                {
+                    if (player != null) player.Notice("准星调整：推左摇杆对准黄色高亮块，再按 X 保存");
+                }
+                else
+                {
+                    PlayerPrefs.SetFloat("vrGazeOffsetX", gazeOffsetNorm.x);
+                    PlayerPrefs.SetFloat("vrGazeOffsetY", gazeOffsetNorm.y);
+                    if (player != null) player.Notice("准星偏移已保存");
+                }
+                return;
+            }
+            if (reticleAdjustMode)
+            {
+                gazeOffsetNorm += pad.Move * (ReticleAdjustSpeed * Time.unscaledDeltaTime);
+                gazeOffsetNorm.x = Mathf.Clamp(gazeOffsetNorm.x, -ReticleAdjustRange, ReticleAdjustRange);
+                gazeOffsetNorm.y = Mathf.Clamp(gazeOffsetNorm.y, -ReticleAdjustRange, ReticleAdjustRange);
+            }
+        }
+
+        // 戴盒确认阶段：玩家戴着盒子不可能按屏幕按钮，因此以"头部位姿静止"
+        // 作为确认条件——戴好盒子的动作天然以静止收尾，静止约 0.6 秒即自动
+        // Recenter 进入 VR。手柄 A 键 / 屏幕按钮作为立即开始的快捷方式保留。
+        const float HeadConfirmGraceSeconds = 6f;
+        const float HeadConfirmStillnessSeconds = 0.6f;
+        const float HeadConfirmStillnessThresholdRad = 3f * Mathf.Deg2Rad; // 陀螺角速度阈值
+
+        void UpdateHeadConfirm()
+        {
+            if (mobileInput != null && mobileInput.ConfirmPressed)
+            {
+                StartCoroutine(EnterVrMode());
+                return;
+            }
+            if (headConfirmStartTime < 0f) headConfirmStartTime = Time.unscaledTime;
+            // 宽限期：戴盒动作本身在动，期间不做静止判定
+            if (Time.unscaledTime - headConfirmStartTime < HeadConfirmGraceSeconds) return;
+            if (!SystemInfo.supportsGyroscope)
+            {
+                // 无陀螺仪设备退化为宽限结束后固定再等待 2 秒直接开始
+                if (Time.unscaledTime - headConfirmStartTime >= HeadConfirmGraceSeconds + 2f)
+                    StartCoroutine(EnterVrMode());
+                return;
+            }
+            if (!Input.gyro.enabled) Input.gyro.enabled = true;
+            Vector3 rate = Input.gyro.rotationRateUnbiased;
+            bool still = rate.sqrMagnitude < HeadConfirmStillnessThresholdRad * HeadConfirmStillnessThresholdRad;
+            stillnessAccum = still ? stillnessAccum + Time.unscaledDeltaTime : 0f;
+            if (stillnessAccum >= HeadConfirmStillnessSeconds)
+                StartCoroutine(EnterVrMode());
         }
 
         public void SetVrMode(bool enabled)
@@ -129,13 +349,14 @@ namespace SparkCode.Gameplay
             else ExitVrMode();
         }
 
-        public void BeginCalibrationPrompt()
+        public void BeginCalibrationPrompt(bool calibrationPattern = false)
         {
             if (IsVrMode)
             {
                 ExitVrMode();
                 return;
             }
+            pendingCalibrationPattern = calibrationPattern;
             StartCoroutine(PrepareVrPrompt());
         }
 
@@ -149,7 +370,7 @@ namespace SparkCode.Gameplay
                 Fail("Cardboard 初始化失败。请检查 XR Plug-in Management 和图形 API 配置。");
                 yield break;
             }
-            uiState = Api.HasDeviceParams() ? UiState.AwaitFlatConfirmation : UiState.ProfileRequired;
+            uiState = Api.HasDeviceParams() ? UiState.AwaitHeadConfirm : UiState.ProfileRequired;
         }
 
         IEnumerator InitializeCardboardLoader()
@@ -168,9 +389,11 @@ namespace SparkCode.Gameplay
 
         IEnumerator EnterVrMode()
         {
-            if (IsVrMode || uiState == UiState.Calibrating) yield break;
-            uiState = UiState.Calibrating;
-            calibrationProgress = 0f;
+            if (IsVrMode) yield break;
+            // 立即隐藏对话框并复位静止检测，防止 Update 重复触发本协程
+            uiState = UiState.Hidden;
+            headConfirmStartTime = -1f;
+            stillnessAccum = 0f;
             yield return InitializeCardboardLoader();
             if (!loaderReady)
             {
@@ -186,23 +409,25 @@ namespace SparkCode.Gameplay
             CaptureNormalCamera();
             CenterCamera.transform.SetParent(trackingReference, true);
             trackingReference.localPosition = Vector3.zero;
-            trackingReference.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            // 校准姿态 = 使用姿态（戴盒正视后按 A 键 Recenter），
+            // 追踪器参考系即 Unity 参考系，无需任何补偿旋转。
+            trackingReference.localRotation = Quaternion.identity;
             trackedPose.enabled = true;
 
             IsVrMode = true;
             IsCardboardActive = true;
-            ApplyVrPerformanceSettings();
             XRGeneralSettings.Instance.Manager.StartSubsystems();
 
-            float started = Time.unscaledTime;
-            while (Time.unscaledTime - started < CalibrationDuration)
-            {
-                calibrationProgress = Mathf.Clamp01((Time.unscaledTime - started) / CalibrationDuration);
-                Api.UpdateScreenParams();
-                yield return null;
-            }
+            // 等一帧让追踪器产生首帧姿态，再以用户当前正视方向为参考做 Recenter。
+            yield return null;
             Api.Recenter();
             uiState = UiState.Hidden;
+            if (pendingCalibrationPattern)
+            {
+                pendingCalibrationPattern = false;
+                CalibrationPatternActive = true;
+                BuildCalibrationPanel();
+            }
         }
 
         public void ExitVrMode()
@@ -210,7 +435,11 @@ namespace SparkCode.Gameplay
             if (!IsVrMode && !loaderReady) return;
             IsVrMode = false;
             IsCardboardActive = false;
-            waitingForProfileScan = false;
+            CalibrationPatternActive = false;
+            pendingCalibrationPattern = false;
+            reticleAdjustMode = false;
+            ReticleAdjustModeActive = false;
+            DestroyCalibrationPanel();
             if (trackedPose != null) trackedPose.enabled = false;
 
             if (loaderReady && XRGeneralSettings.Instance != null && XRGeneralSettings.Instance.Manager != null)
@@ -221,7 +450,6 @@ namespace SparkCode.Gameplay
             }
             loaderReady = false;
             RestoreNormalCamera();
-            RestorePerformanceSettings();
             uiState = UiState.Hidden;
         }
 
@@ -248,76 +476,18 @@ namespace SparkCode.Gameplay
             if (trackingReference != null) trackingReference.localRotation = Quaternion.identity;
         }
 
-        void ApplyVrPerformanceSettings()
+        void SelectViewerProfile(int index)
         {
-            if (performanceCaptured) return;
-            performanceCaptured = true;
-            if (cameraData != null)
-            {
-                normalPostProcessing = cameraData.renderPostProcessing;
-                cameraData.renderPostProcessing = false;
-            }
-            if (urpAsset != null)
-            {
-                normalRenderScale = urpAsset.renderScale;
-                urpAsset.renderScale = 0.8f;
-            }
-            normalVsyncCount = QualitySettings.vSyncCount;
-            normalTargetFrameRate = Application.targetFrameRate;
-            QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = 60;
-        }
-
-        void RestorePerformanceSettings()
-        {
-            if (!performanceCaptured) return;
-            if (cameraData != null) cameraData.renderPostProcessing = normalPostProcessing;
-            if (urpAsset != null) urpAsset.renderScale = normalRenderScale;
-            QualitySettings.vSyncCount = normalVsyncCount;
-            Application.targetFrameRate = normalTargetFrameRate;
-            performanceCaptured = false;
-        }
-
-        IEnumerator ScanViewerProfile()
-        {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            const string cameraPermission = "android.permission.CAMERA";
-            if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(cameraPermission))
-            {
-                UnityEngine.Android.Permission.RequestUserPermission(cameraPermission);
-                float started = Time.unscaledTime;
-                while (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(cameraPermission) &&
-                       Time.unscaledTime - started < 15f)
-                    yield return null;
-            }
-            if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(cameraPermission))
-            {
-                Fail("需要相机权限才能扫描 VR 盒子的 QR 码。");
-                yield break;
-            }
-#endif
-            if (!loaderReady) yield return InitializeCardboardLoader();
-            if (!loaderReady)
-            {
-                Fail("Cardboard 尚未初始化，无法扫描 QR 码。");
-                yield break;
-            }
-            waitingForProfileScan = true;
-            uiState = UiState.ProfileRequired;
-            Api.ScanDeviceParams();
-        }
-
-        void UseDefaultViewerProfile()
-        {
-            if (!loaderReady) return;
-            Api.SaveDeviceParams(DefaultViewerUri);
+            if (!loaderReady || index < 0 || index >= SupportedViewers.Length) return;
+            Api.SaveDeviceParams(SupportedViewers[index].uri);
             Api.ReloadDeviceParams();
-            uiState = UiState.AwaitFlatConfirmation;
+            uiState = UiState.AwaitHeadConfirm;
         }
 
         void CancelVrPrompt()
         {
-            waitingForProfileScan = false;
+            headConfirmStartTime = -1f;
+            stillnessAccum = 0f;
             if (!IsVrMode && loaderReady && XRGeneralSettings.Instance != null &&
                 XRGeneralSettings.Instance.Manager != null)
             {
@@ -343,6 +513,7 @@ namespace SparkCode.Gameplay
 
         void OnDestroy()
         {
+            DestroyCalibrationPanel();
             if (trackingReference != null) Destroy(trackingReference.gameObject);
         }
 
@@ -360,8 +531,16 @@ namespace SparkCode.Gameplay
 
             if (uiState == UiState.Hidden)
             {
-                if (GUI.Button(ToggleRect, IsVrMode ? "退出 VR" : "VR 模式", buttonStyle))
-                    BeginCalibrationPrompt();
+                // VR 模式下不绘制自定义按钮：Cardboard 原生控件（左上角 X 关闭键、
+                // 右上角齿轮键）会消费其区域的触摸事件，自绘按钮与其重叠导致点不动。
+                // 退出 VR 由原生 X 键经 Api.IsCloseButtonPressed 处理（见 Update）。
+                if (!IsVrMode)
+                {
+                    if (GUI.Button(ToggleRect, "VR 模式", buttonStyle))
+                        BeginCalibrationPrompt();
+                    if (GUI.Button(CalibrateRect, "VR 校准", buttonStyle))
+                        BeginCalibrationPrompt(calibrationPattern: true);
+                }
             }
             else
             {
@@ -369,6 +548,100 @@ namespace SparkCode.Gameplay
                 DrawDialog();
             }
             GUI.matrix = previous;
+
+            if (IsVrMode)
+            {
+                // 校准模式下准星同样绘制（调整模式需要看到准星去对高亮块）
+                DrawGazeReticle();
+                if (CalibrationPatternActive) DrawCalibrationPattern();
+            }
+        }
+
+        /// <summary>
+        /// VR 校准测试图：每眼一张，用于戴着盒子调节镜片/瞳距/姿态。
+        /// 第 1 页 对中与对齐；第 2 页 网格与畸变；第 3 页 文字清晰度；第 4 页 会聚。
+        /// 全部用原始屏幕坐标绘制（左右眼视口各占半屏）。
+        /// </summary>
+        void DrawCalibrationPattern()
+        {
+            Color previousColor = GUI.color;
+            GUI.depth = -1200;
+            float w = Screen.width;
+            float h = Screen.height;
+            float half = w * 0.5f;
+            float centerY = h * 0.5f;
+            float[] eyeCentersX = { w * 0.25f, w * 0.75f };
+
+            foreach (float cx in eyeCentersX)
+            {
+                float left = cx - half * 0.5f;
+                // 文字清晰度页（黑底）：调镜片焦距至文字最清晰
+                GUI.color = new Color(0f, 0f, 0f, 0.55f);
+                GUI.DrawTexture(new Rect(left + 10f, centerY - 130f, half - 20f, 260f), Texture2D.whiteTexture);
+                GUI.color = new Color(1f, 1f, 1f, 0.95f);
+                DrawSizedLabel(new Rect(left + 20f, centerY - 120f, half - 40f, 60f),
+                    "星火神殿 VR", titleStyle);
+                DrawSizedLabel(new Rect(left + 20f, centerY - 50f, half - 40f, 60f),
+                    "AaBbCc 0123456789", bodyStyle);
+                DrawSizedLabel(new Rect(left + 20f, centerY + 20f, half - 40f, 70f),
+                    "调节镜片至文字最清晰", bodyStyle);
+            }
+
+            // 底部操作提示（整屏居中）
+            GUI.color = new Color(0f, 0f, 0f, 0.55f);
+            GUI.DrawTexture(new Rect(w * 0.5f - 330f, h - 64f, 660f, 44f), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            string hint = reticleAdjustMode
+                ? "推左摇杆移动准星对准黄色高亮块  ·  再按 X 保存"
+                : "按 X 调整准星  ·  按 B 进入 VR  ·  左上角 X 退出校准";
+            DrawSizedLabel(new Rect(w * 0.5f - 330f, h - 60f, 660f, 40f), hint, bodyStyle);
+            GUI.color = previousColor;
+        }
+
+        /// <summary>在原始屏幕坐标下用居中对齐重绘标签（GUI.matrix 已还原）。</summary>
+        void DrawSizedLabel(Rect rect, string text, GUIStyle template)
+        {
+            GUIStyle style = new GUIStyle(template) { alignment = TextAnchor.MiddleCenter };
+            GUI.Label(rect, text, style);
+        }
+
+        /// <summary>
+        /// VR 目视准星：Screen Space Overlay 画布不参与 XR 立体渲染，
+        /// 因此用 IMGUI 在左右眼视口中心各画一个十字线。
+        /// 注意必须用原始屏幕坐标（在恢复 GUI.matrix 之后绘制），不能用设计空间。
+        /// </summary>
+        void DrawGazeReticle()
+        {
+            Color previousColor = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, 0.9f);
+            GUI.depth = -1200;
+            float w = Screen.width;
+            float h = Screen.height;
+            float half = w * 0.5f;
+            // 叠加校准得到的偏移，使准星与真实视口中心射线一致
+            float centerY = h * 0.5f + gazeOffsetNorm.y * h;
+            const float ArmHalf = 16f;
+            const float ArmThickness = 3f;
+            const float Gap = 5f;
+            const float DotSize = 5f;
+            float[] eyeCentersX = { w * 0.25f + gazeOffsetNorm.x * half,
+                                    w * 0.75f + gazeOffsetNorm.x * half };
+            foreach (float cx in eyeCentersX)
+            {
+                // 中心点
+                GUI.DrawTexture(new Rect(cx - DotSize * 0.5f, centerY - DotSize * 0.5f, DotSize, DotSize),
+                    Texture2D.whiteTexture);
+                // 十字四臂（带中心空隙，避免遮挡注视点）
+                GUI.DrawTexture(new Rect(cx - ArmHalf, centerY - ArmThickness * 0.5f,
+                        ArmHalf - Gap, ArmThickness), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cx + Gap, centerY - ArmThickness * 0.5f,
+                        ArmHalf - Gap, ArmThickness), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cx - ArmThickness * 0.5f, centerY - ArmHalf,
+                        ArmThickness, ArmHalf - Gap), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cx - ArmThickness * 0.5f, centerY + Gap,
+                        ArmThickness, ArmHalf - Gap), Texture2D.whiteTexture);
+            }
+            GUI.color = previousColor;
         }
 
         void DrawDialog()
@@ -380,32 +653,27 @@ namespace SparkCode.Gameplay
                     GUI.Label(new Rect(610f, 350f, 700f, 150f), "正在初始化 Cardboard……", bodyStyle);
                     break;
                 case UiState.ProfileRequired:
-                    GUI.Label(new Rect(610f, 315f, 700f, 180f),
-                        waitingForProfileScan
-                            ? "请扫描 VR 盒子上的 QR 码，完成后返回本应用。"
-                            : "需要 VR 盒子的 Viewer Profile 来校准镜片、视口和畸变。\n请扫码，或先使用通用 Cardboard 参数。", bodyStyle);
-                    if (GUI.Button(new Rect(680f, 510f, 560f, 64f), "扫描盒子 QR 码", buttonStyle))
-                        StartCoroutine(ScanViewerProfile());
-                    if (GUI.Button(new Rect(680f, 590f, 560f, 64f), "使用通用 Cardboard 参数", buttonStyle))
-                        UseDefaultViewerProfile();
-                    if (GUI.Button(new Rect(835f, 710f, 250f, 62f), "取消", buttonStyle))
-                        CancelVrPrompt();
-                    break;
-                case UiState.AwaitFlatConfirmation:
-                    GUI.Label(new Rect(610f, 320f, 700f, 210f),
-                        "请将手机平放在水平桌面上，屏幕朝上并保持静止。\n确认后将启动头部追踪，以平放姿态作为正下方参考视角。\n校准期间请不要移动手机。", bodyStyle);
-                    if (GUI.Button(new Rect(690f, 570f, 540f, 72f), "已平放，开始校准", buttonStyle))
-                        StartCoroutine(EnterVrMode());
+                    GUI.Label(new Rect(610f, 300f, 700f, 150f),
+                        "请选择 VR 盒子型号。\n将载入对应官方光学参数（镜片畸变、瞳距与视口）后继续。", bodyStyle);
+                    float buttonY = 470f;
+                    for (int i = 0; i < SupportedViewers.Length; i++)
+                    {
+                        int index = i;
+                        if (GUI.Button(new Rect(680f, buttonY, 560f, 64f),
+                                "选用 " + SupportedViewers[i].name, buttonStyle))
+                            SelectViewerProfile(index);
+                        buttonY += 84f;
+                    }
                     if (GUI.Button(new Rect(835f, 700f, 250f, 62f), "取消", buttonStyle))
                         CancelVrPrompt();
                     break;
-                case UiState.Calibrating:
-                    GUI.Label(new Rect(610f, 340f, 700f, 150f),
-                        "正在启动 Cardboard 并校准，请保持手机平放且静止……", bodyStyle);
-                    GUI.Box(new Rect(680f, 540f, 560f, 34f), GUIContent.none);
-                    GUI.DrawTexture(new Rect(684f, 544f, 552f * calibrationProgress, 26f), Texture2D.whiteTexture);
-                    GUI.Label(new Rect(610f, 610f, 700f, 62f),
-                        Mathf.RoundToInt(calibrationProgress * 100f) + "%", bodyStyle);
+                case UiState.AwaitHeadConfirm:
+                    GUI.Label(new Rect(610f, 320f, 700f, 210f),
+                        "请将手机放入 VR 盒子并戴好，平视前方后保持静止。\n头部静止约半秒后会自动开始校准，\n也可以按手柄 A 键（或点击下面按钮）立即开始。", bodyStyle);
+                    if (GUI.Button(new Rect(690f, 570f, 540f, 72f), "立即开始（A）", buttonStyle))
+                        StartCoroutine(EnterVrMode());
+                    if (GUI.Button(new Rect(835f, 700f, 250f, 62f), "取消", buttonStyle))
+                        CancelVrPrompt();
                     break;
                 case UiState.Error:
                     GUI.Label(new Rect(610f, 325f, 700f, 220f), errorMessage, bodyStyle);

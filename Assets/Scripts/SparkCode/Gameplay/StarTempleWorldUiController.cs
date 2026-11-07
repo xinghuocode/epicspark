@@ -187,14 +187,7 @@ namespace SparkCode.Gameplay
             var hover = FindButton(screenPoint);
             SetHoveredButton(hover);
             if (mobileBridge)
-            {
                 MobileUiOwnsInputThisFrame = hover != null;
-                if (MobileCancelPressed)
-                {
-                    HandleAction(StarTempleUiAction.Back);
-                    return;
-                }
-            }
             bool clicked = Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || MobileConfirmPressed;
             if (clicked && hover != null) HandleAction(hover.action);
 
@@ -414,12 +407,6 @@ namespace SparkCode.Gameplay
             bool overCard = Contains(lorePanelRect, screenPoint);
             PointerOverUiThisFrame = overBridge || overCard;
 
-            if (loreFocused && MobileCancelPressed)
-            {
-                EndLoreFocus();
-                return;
-            }
-
             if (loreFocused && overCard && (Input.GetMouseButtonDown(1) || MobileInteractPressed))
             {
                 EndLoreFocus();
@@ -438,9 +425,12 @@ namespace SparkCode.Gameplay
             get { return StarTempleMobileGamepad.Active ? StarTempleMobileGamepad.Instance : null; }
         }
         bool MobilePadActive { get { return MobilePad != null; } }
-        bool MobileConfirmPressed { get { return MobilePadActive && MobilePad.ConfirmPressed; } }
-        bool MobileInteractPressed { get { return MobilePadActive && MobilePad.InteractPressed; } }
-        bool MobileCancelPressed { get { return MobilePadActive && MobilePad.CancelPressed; } }
+        // VR 校准模式期间手柄键位服务于校准（X 调准星 / B 结束校准），
+        // 必须屏蔽，否则 B 会同时把 bridge 面板当"返回"关掉。
+        bool CalibrationBlocksPad { get { return StarTempleVrController.CalibrationPatternActive; } }
+        bool MobileConfirmPressed { get { return MobilePadActive && !CalibrationBlocksPad && MobilePad.ConfirmPressed; } }
+        bool MobileInteractPressed { get { return MobilePadActive && !CalibrationBlocksPad && MobilePad.InteractPressed; } }
+        bool MobileCancelPressed { get { return MobilePadActive && !CalibrationBlocksPad && MobilePad.CancelPressed; } }
 
         static float FlatDistance(Vector3 a, Vector3 b)
         {
