@@ -110,6 +110,8 @@ namespace SparkCode.Gameplay
         {
             if (Application.platform == RuntimePlatform.Android && GetComponent<StarTempleMobileGamepad>() == null)
                 gameObject.AddComponent<StarTempleMobileGamepad>();
+            if (Application.platform == RuntimePlatform.Android && GetComponent<StarTempleVrController>() == null)
+                gameObject.AddComponent<StarTempleVrController>();
 
             controller = GetComponent<CharacterController>();
             if (playerCamera == null) playerCamera = GetComponentInChildren<Camera>(true);
@@ -171,7 +173,8 @@ namespace SparkCode.Gameplay
             UpdateCrouch();
             UpdateMovement();
 
-            bool uiConsumesClick = showBindings || StarTempleWorldUiController.PointerOverUiThisFrame || MobileUiOwnsInput;
+            bool uiConsumesClick = showBindings || StarTempleWorldUiController.PointerOverUiThisFrame ||
+                                       StarTempleVrController.PointerOverUiThisFrame || MobileUiOwnsInput;
             var pad = MobilePad;
             if (!uiConsumesClick && (Pressed(StarAction.Attack) || (pad != null && pad.AttackPressed))) DoAttack();
             if (!uiConsumesClick && (Pressed(StarAction.Interact) || (pad != null && pad.InteractPressed))) DoInteract();
@@ -182,7 +185,7 @@ namespace SparkCode.Gameplay
 
         void Look()
         {
-            if (playerCamera == null) return;
+            if (playerCamera == null || StarTempleVrController.IsCardboardActive) return;
             float yawDelta = Input.GetAxisRaw("Mouse X") * mouseSensitivity;
             float pitchDelta = Input.GetAxisRaw("Mouse Y") * mouseSensitivity;
             var pad = MobilePad;
@@ -192,7 +195,7 @@ namespace SparkCode.Gameplay
                 pitchDelta += pad.Look.y * Time.deltaTime;
             }
             float yaw = transform.eulerAngles.y + yawDelta;
-            pitch = Mathf.Clamp(pitch - pitchDelta, -85f, 85f);
+            pitch = Mathf.Clamp(pitch - pitchDelta, -90f, 90f);
             transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             playerCamera.transform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
         }
@@ -408,6 +411,14 @@ namespace SparkCode.Gameplay
             cursorVisible = visible;
             Cursor.visible = visible;
             Cursor.lockState = visible ? CursorLockMode.None : CursorLockMode.Locked;
+        }
+
+        public void AlignViewToFlatCalibration()
+        {
+            // Flat phone calibration defines the reference view as straight down.
+            pitch = 90f;
+            if (playerCamera != null)
+                playerCamera.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
         }
 
         public void Notice(string message)

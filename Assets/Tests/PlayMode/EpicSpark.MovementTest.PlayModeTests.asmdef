@@ -6,7 +6,9 @@
     "Unity.InputSystem",
     "Unity.InputSystem.TestFramework",
     "UnityEngine.TestRunner",
-    "UnityEditor.TestRunner"
+    "UnityEditor.TestRunner",
+    "Unity.XR.Management",
+    "Unity.XR.Management.Editor"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -8,4 +8,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/BlenderStarTemple_Gameplay.unity
     guid: dc53bc83f949e2649b9234193417e088
-  m_configObjects: {}
+  m_configObjects:
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 689316d3b2271f04f8cf6796396d2338,
+      type: 2}

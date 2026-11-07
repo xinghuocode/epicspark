@@ -47,12 +47,20 @@ namespace SparkCode.Gameplay
         public string DeviceName { get; private set; } = "未连接";
         public bool SingleStickDevice { get; private set; }
         public bool GyroAvailable { get; private set; }
+        public bool IsGyroCalibrating { get; private set; }
+        public float GyroCalibrationProgress { get; private set; }
+        public Vector3 GyroBias { get; private set; }
 
         InputDevice device;
         readonly List<ButtonControl> indexedButtons = new List<ButtonControl>();
         InputDevice buttonsCachedFor;
         int navigationDirection;
         bool gyroEnabledByUs;
+        bool gyroCalibrationCompleted;
+        Vector3 gyroCalibrationSum;
+        float gyroCalibrationStarted;
+        int gyroCalibrationSamples;
+        const float GyroCalibrationDuration = 1.2f;
 
         void Awake()
         {
@@ -82,7 +90,11 @@ namespace SparkCode.Gameplay
         void OnApplicationPause(bool paused)
         {
             if (Application.platform != RuntimePlatform.Android || !GyroAvailable) return;
-            if (paused && gyroEnabledByUs) Input.gyro.enabled = false;
+            if (paused && gyroEnabledByUs)
+            {
+                Input.gyro.enabled = false;
+                CancelGyroCalibration();
+            }
             else if (!paused) EnableGyro();
         }
 
@@ -91,6 +103,36 @@ namespace SparkCode.Gameplay
             Input.gyro.updateInterval = 1f / 60f;
             Input.gyro.enabled = true;
             gyroEnabledByUs = true;
+        }
+
+        public void BeginGyroCalibration()
+        {
+            gyroCalibrationCompleted = false;
+            GyroCalibrationProgress = 0f;
+            if (!Active || !GyroAvailable)
+            {
+                IsGyroCalibrating = false;
+                return;
+            }
+            EnableGyro();
+            gyroCalibrationSum = Vector3.zero;
+            gyroCalibrationSamples = 0;
+            gyroCalibrationStarted = Time.unscaledTime;
+            IsGyroCalibrating = true;
+        }
+
+        public void CancelGyroCalibration()
+        {
+            IsGyroCalibrating = false;
+            gyroCalibrationCompleted = false;
+            GyroCalibrationProgress = 0f;
+        }
+
+        public bool ConsumeGyroCalibrationCompletion()
+        {
+            if (!gyroCalibrationCompleted) return false;
+            gyroCalibrationCompleted = false;
+            return true;
         }
 
         void Update()
@@ -178,13 +220,25 @@ namespace SparkCode.Gameplay
         void ReadGyroscope()
         {
             GyroAvailable = SystemInfo.supportsGyroscope;
+            if (StarTempleVrController.IsCardboardActive)
+            {
+                Look = Vector2.zero;
+                return;
+            }
             if (!GyroAvailable || !Input.gyro.enabled)
             {
                 Look = Vector2.zero;
                 return;
             }
 
-            Vector3 rate = Input.gyro.rotationRateUnbiased;
+            UpdateGyroCalibration();
+            if (IsGyroCalibrating)
+            {
+                Look = Vector2.zero;
+                return;
+            }
+
+            Vector3 rate = Input.gyro.rotationRateUnbiased - GyroBias;
             if (Mathf.Abs(rate.x) < gyroDeadZone) rate.x = 0f;
             if (Mathf.Abs(rate.y) < gyroDeadZone) rate.y = 0f;
 
@@ -197,6 +251,19 @@ namespace SparkCode.Gameplay
             if (invertGyroYaw) yaw = -yaw;
             if (invertGyroPitch) pitch = -pitch;
             Look = new Vector2(yaw, pitch);
+        }
+
+        void UpdateGyroCalibration()
+        {
+            if (!IsGyroCalibrating) return;
+            gyroCalibrationSum += Input.gyro.rotationRateUnbiased;
+            gyroCalibrationSamples++;
+            GyroCalibrationProgress = Mathf.Clamp01(
+                (Time.unscaledTime - gyroCalibrationStarted) / GyroCalibrationDuration);
+            if (GyroCalibrationProgress < 1f) return;
+            if (gyroCalibrationSamples > 0) GyroBias = gyroCalibrationSum / gyroCalibrationSamples;
+            IsGyroCalibrating = false;
+            gyroCalibrationCompleted = true;
         }
 
         void UpdateNavigation(Vector2 stick, DpadControl dpad)
