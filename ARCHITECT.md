@@ -232,6 +232,6 @@ sequenceDiagram
 
 ## 5. 知识库
 
-知识库采用RAG技术，维护向量数据库存储历史事件相关的知识。用户输入的历史事件名称将被用于在知识库中检索相关知识，并通过重排序算法对检索结果进行排序，以确保最相关的信息优先呈现给剧情Agent。
+知识库采用RAG技术，全部在Unity进程内以C#实现，不依赖独立检索进程或HTTP检索服务。结构化历史事件语料位于`Assets/Resources/Knowledge/Events`，随游戏包发布；向量索引保存在`Application.persistentDataPath`。检索采用向量余弦与BM25双路召回，经RRF融合后重排序，以确保最相关的信息优先呈现给剧情Agent。具体接口见`Docs/KnowledgeRAG.md`。
 
-4.4节和5章提到的词嵌入模型全部采用ai.gitee.com的Qwen3-Embedding-8B模型。5章提到的重排序模型采用ai.gitee.com的Qwen3-Reranker-8B模型。
+4.4节和本章提到的词嵌入模型默认采用ai.gitee.com的Qwen3-Embedding-8B模型，重排序模型默认采用ai.gitee.com的Qwen3-Reranker-8B模型。模型端点通过`KnowledgeSettings.baseUrl`配置，可替换为其他OpenAI兼容地址；未配置API Key或远端不可用时，使用Unity内的确定性向量、BM25与本地重排继续工作。

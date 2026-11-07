@@ -12,7 +12,7 @@
 | `OpenAI/StreamingDownloadHandler.cs` | SSE 流式数据处理器 |
 | `OpenAI/OpenAITester.cs` | 运行时冒烟测试组件 |
 | `Editor/OpenAISettingsEditor.cs` | 配置资源的 Inspector 扩展 (编辑器内 Ping 测试) |
-| `Knowledge/` | 知识库 RAG 客户端: 事件卡片 / 混合检索 / 重排结果，对接 `Tools/knowledge_rag`，见 [`Docs/KnowledgeRAG.md`](../../../Docs/KnowledgeRAG.md) |
+| `Knowledge/` | Unity 进程内知识库 RAG: Resources 语料 / 向量索引 / BM25 / 重排，见 [`Docs/KnowledgeRAG.md`](../../../Docs/KnowledgeRAG.md) |
 
 ## 快速开始
 
@@ -64,7 +64,7 @@ client.Dispose();
 
 ## 知识库检索 (Knowledge)
 
-历史知识不走 LLM 现编，而是由独立的 RAG 服务提供（`Tools/knowledge_rag`，架构文档第 5 章）：
+历史知识由 **Unity 进程内纯 C# RAG** 提供（架构文档第 5 章），不需要启动任何检索服务：
 
 ```csharp
 using EpicSpark.AI.Knowledge;
@@ -79,8 +79,9 @@ string context = card.context;                        // 直接塞进剧情 Agen
 var hits = await kb.SearchAsync("巴士底狱陷落后发生了什么", topK: 5);
 ```
 
-服务默认监听 `http://127.0.0.1:8787`，启动方式见 [`Docs/KnowledgeRAG.md`](../../../Docs/KnowledgeRAG.md)。
-未配置 API Key 时会自动降级为本地向量 + 本地重排，离线也能开发调试。
+语料位于 `Assets/Resources/Knowledge/Events`，向量索引保存在 `Application.persistentDataPath`。
+`KnowledgeSettings.baseUrl` 可指定 OpenAI 兼容模型端点（默认 `https://ai.gitee.com/v1`）；
+未配置 API Key 时使用 Unity 内向量 + 本地重排，离线也能开发调试。详见 [`Docs/KnowledgeRAG.md`](../../../Docs/KnowledgeRAG.md)。
 
 ## 设计决策记录
 

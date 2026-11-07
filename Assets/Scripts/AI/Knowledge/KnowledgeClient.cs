@@ -1,181 +1,165 @@
 using System;
-using System.Text;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Networking;
 
 namespace EpicSpark.AI.Knowledge
 {
     /// <summary>
-    /// 知识库检索客户端（纯 UnityWebRequest，零外部依赖）。
-    /// 负责与 Tools/knowledge_rag 暴露的 RAG 服务通信：
-    /// <list type="bullet">
-    /// <item>开局：<see cref="GetEventCardAsync"/> 把用户输入的历史事件变成可塞进提示词的知识上下文</item>
-    /// <item>过程中：<see cref="SearchAsync"/> 按任意说法做混合检索 + 重排</item>
-    /// <item>运维：<see cref="HealthAsync"/> 检查服务与降级状态</item>
-    /// </list>
-    /// 线程约定与 <c>OpenAIClient</c> 一致：await 期间通过 Task.Yield 回到主线程，可直接调用 Unity API。
+    /// Unity 进程内知识库客户端。名称保留为 Client 以兼容主程序既有调用，
+    /// 但它不会连接任何独立检索服务：语料、BM25、向量索引与重排均在当前 Unity 进程内。
+    /// baseUrl 仅用于可选的 OpenAI 兼容 embedding / rerank 模型端点。
     /// </summary>
     public class KnowledgeClient : IDisposable
     {
-        readonly string baseUrl;
-        readonly string adminToken;
-        readonly int timeoutSeconds;
-        readonly int defaultTopK;
-        readonly int budgetChars;
+        private readonly KnowledgeSettings settings;
+        private readonly KnowledgeOptions options;
+        private readonly string resourcePath;
+        private readonly string indexPath;
+        private readonly KnowledgeEngine engine;
+        private readonly SemaphoreSlim clientLock = new SemaphoreSlim(1, 1);
+        private bool initialized;
+        private bool disposed;
 
         public KnowledgeClient(KnowledgeSettings settings)
         {
-            if (settings == null) throw new ArgumentNullException(nameof(settings));
-            baseUrl = (settings.baseUrl ?? "").TrimEnd('/');
-            adminToken = settings.adminToken ?? string.Empty;
-            timeoutSeconds = Mathf.Max(1, settings.timeoutSeconds);
-            defaultTopK = Mathf.Max(1, settings.defaultTopK);
-            budgetChars = Mathf.Max(200, settings.contextBudgetChars);
+            this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            options = settings.ToOptions();
+            resourcePath = settings.resourcePath;
+            indexPath = Path.Combine(
+                Application.persistentDataPath,
+                "Knowledge",
+                string.IsNullOrEmpty(settings.indexFileName) ? "vectors.bin" : settings.indexFileName);
+            engine = new KnowledgeEngine(
+                options,
+                indexPath,
+                new KnowledgeRemoteEmbeddings(options),
+                new KnowledgeRemoteReranker(options));
         }
 
-        public KnowledgeClient(string baseUrl, int timeoutSeconds = 15, int defaultTopK = 6, int contextBudgetChars = 2400)
+        /// <summary>使用默认 Resources 语料，并允许直接指定模型 baseUrl。</summary>
+        public KnowledgeClient(
+            string baseUrl,
+            int timeoutSeconds = 30,
+            int defaultTopK = 6,
+            int contextBudgetChars = 2400)
         {
-            this.baseUrl = (baseUrl ?? "").TrimEnd('/');
-            this.timeoutSeconds = timeoutSeconds;
-            this.defaultTopK = defaultTopK;
-            this.budgetChars = contextBudgetChars;
-            adminToken = string.Empty;
-        }
-
-        /// <summary>服务健康检查。degraded 非空说明远端模型不可用、已降级到本地向量/重排。</summary>
-        public async Task<KnowledgeHealth> HealthAsync(System.Threading.CancellationToken cancellationToken = default)
-        {
-            using (var req = NewGet(baseUrl + "/health"))
+            options = new KnowledgeOptions
             {
-                await SendAsync(req, cancellationToken);
-                return Parse<KnowledgeHealth>(req.downloadHandler.text);
+                baseUrl = (baseUrl ?? string.Empty).TrimEnd('/'),
+                timeoutSeconds = timeoutSeconds,
+                defaultTopK = defaultTopK,
+                contextBudgetChars = contextBudgetChars,
+            };
+            resourcePath = "Knowledge/Events";
+            indexPath = Path.Combine(Application.persistentDataPath, "Knowledge", "vectors.bin");
+            engine = new KnowledgeEngine(
+                options,
+                indexPath,
+                new KnowledgeRemoteEmbeddings(options),
+                new KnowledgeRemoteReranker(options));
+        }
+
+        public bool IsInitialized => initialized;
+        public IReadOnlyList<KnowledgeEventInfo> Events => engine.Events;
+
+        public async Task InitializeAsync(CancellationToken cancellationToken = default, bool forceRebuild = false)
+        {
+            ThrowIfDisposed();
+            await clientLock.WaitAsync(cancellationToken);
+            try
+            {
+                if (initialized && !forceRebuild) return;
+                List<KnowledgeEventInfo> events = KnowledgeUnityLoader.LoadEvents(resourcePath);
+                await engine.InitializeAsync(events, cancellationToken, forceRebuild);
+                initialized = true;
+            }
+            finally
+            {
+                clientLock.Release();
             }
         }
 
-        /// <summary>
-        /// 事件卡片：用户输入"法国大革命"/"山顶洞人"等说法，返回事件元数据、证据块与提示词上下文。
-        /// 未命中已收录事件时 matched/event 为 null，但仍会走通用检索返回相近知识（见 evidences/context）。
-        /// </summary>
+        public async Task<KnowledgeHealth> HealthAsync(CancellationToken cancellationToken = default)
+        {
+            await EnsureInitialized(cancellationToken);
+            return engine.GetHealth();
+        }
+
         public async Task<KnowledgeEventCard> GetEventCardAsync(
             string name,
             int topK = 0,
             int budgetCharsOverride = 0,
-            System.Threading.CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("name 不能为空", nameof(name));
-            var payload = new KnowledgeEventRequest
-            {
-                name = name.Trim(),
-                top_k = topK > 0 ? topK : defaultTopK,
-                budget_chars = budgetCharsOverride > 0 ? budgetCharsOverride : budgetChars,
-            };
-            using (var req = NewJsonPost(baseUrl + "/v1/knowledge/event", JsonUtility.ToJson(payload)))
-            {
-                await SendAsync(req, cancellationToken);
-                return Parse<KnowledgeEventCard>(req.downloadHandler.text);
-            }
+            await EnsureInitialized(cancellationToken);
+            return await engine.GetEventCardAsync(name, topK, budgetCharsOverride, cancellationToken);
         }
 
-        /// <summary>通用检索：混合召回 + 重排，返回带打分的文本块与拼好的上下文。</summary>
         public async Task<KnowledgeSearchResponse> SearchAsync(
             string query,
             int topK = 0,
             bool useRerank = true,
-            System.Threading.CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default)
+        {
+            return await SearchAsync(query, null, topK, useRerank, cancellationToken);
+        }
+
+        public async Task<KnowledgeSearchResponse> SearchAsync(
+            string query,
+            KnowledgeFilter filter,
+            int topK = 0,
+            bool useRerank = true,
+            CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(query)) throw new ArgumentException("query 不能为空", nameof(query));
-            var payload = new KnowledgeSearchRequest
-            {
-                query = query.Trim(),
-                top_k = topK > 0 ? topK : defaultTopK,
-                use_rerank = useRerank,
-            };
-            using (var req = NewJsonPost(baseUrl + "/v1/knowledge/search", JsonUtility.ToJson(payload)))
-            {
-                await SendAsync(req, cancellationToken);
-                return Parse<KnowledgeSearchResponse>(req.downloadHandler.text);
-            }
+            await EnsureInitialized(cancellationToken);
+            return await engine.SearchAsync(query, topK, useRerank, filter, cancellationToken);
         }
 
-        // ================== 底层封装 ==================
-
-        UnityWebRequest NewJsonPost(string url, string json)
+        public async Task<KnowledgeMatch> ResolveAsync(string query, CancellationToken cancellationToken = default)
         {
-            var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST);
-            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
-            req.downloadHandler = new DownloadHandlerBuffer();
-            ApplyCommonHeaders(req);
-            return req;
+            await EnsureInitialized(cancellationToken);
+            return engine.Resolve(query);
         }
 
-        UnityWebRequest NewGet(string url)
+        public async Task<KnowledgeHealth> RebuildIndexAsync(CancellationToken cancellationToken = default)
         {
-            var req = UnityWebRequest.Get(url);
-            ApplyCommonHeaders(req);
-            return req;
+            await InitializeAsync(cancellationToken, true);
+            return engine.GetHealth();
         }
 
-        void ApplyCommonHeaders(UnityWebRequest req)
+        private async Task EnsureInitialized(CancellationToken cancellationToken)
         {
-            req.timeout = timeoutSeconds;
-            req.SetRequestHeader("Content-Type", "application/json");
-            if (!string.IsNullOrEmpty(adminToken))
-                req.SetRequestHeader("X-RAG-Token", adminToken);
+            if (!initialized) await InitializeAsync(cancellationToken);
         }
 
-        async Task SendAsync(UnityWebRequest req, System.Threading.CancellationToken cancellationToken)
+        private void ThrowIfDisposed()
         {
-            var op = req.SendWebRequest();
-            while (!op.isDone)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    req.Abort();
-                    throw new TaskCanceledException("知识库请求已取消");
-                }
-                await Task.Yield();
-            }
-
-            if (req.result != UnityWebRequest.Result.Success)
-                throw new KnowledgeApiException((int)req.responseCode, req.error, req.downloadHandler?.text);
+            if (disposed) throw new ObjectDisposedException(nameof(KnowledgeClient));
         }
-
-        static T Parse<T>(string text) where T : class
-        {
-            T value;
-            try
-            {
-                value = JsonUtility.FromJson<T>(text);
-            }
-            catch (Exception exc)
-            {
-                throw new KnowledgeApiException(0, "响应解析失败: " + exc.Message, Shorten(text));
-            }
-            return value ?? throw new KnowledgeApiException(0, "响应为空", Shorten(text));
-        }
-
-        static string Shorten(string s) => string.IsNullOrEmpty(s) || s.Length <= 300 ? s : s.Substring(0, 300) + "…";
 
         public void Dispose()
         {
-            // 请求对象在 SendAsync 内即时释放，这里保留以对齐 OpenAIClient 的 IDisposable 用法。
+            disposed = true;
+            clientLock.Dispose();
         }
     }
 
-    /// <summary>知识库服务返回非 2xx 或响应无法解析时抛出。</summary>
+    /// <summary>保留旧异常类型，避免主程序既有 catch 代码失效。</summary>
     public class KnowledgeApiException : Exception
     {
         public int StatusCode { get; }
         public string ErrorBody { get; }
 
         public KnowledgeApiException(int statusCode, string message, string errorBody)
-            : base($"知识库服务错误 {statusCode}: {message} | {Shorten(errorBody)}")
+            : base(message)
         {
             StatusCode = statusCode;
             ErrorBody = errorBody;
         }
-
-        static string Shorten(string s) => string.IsNullOrEmpty(s) ? "" : (s.Length > 300 ? s.Substring(0, 300) + "…" : s);
     }
 }
