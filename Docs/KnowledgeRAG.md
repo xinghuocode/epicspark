@@ -18,7 +18,7 @@ flowchart LR
     RR --> CX[事件卡片 / 提示词上下文]
     CX --> S
     S --> A[剧情 Agent]
-    D[Resources/Knowledge/Events<br/>100 个事件 JSONL] --> E
+    D[Resources/Knowledge/Events<br/>150 个事件 JSONL] --> E
     E --> IDX[Application.persistentDataPath<br/>向量索引]
     E -.可选.-> M[baseUrl 指定的<br/>Embedding / Rerank 模型端点]
 ```
@@ -42,9 +42,11 @@ Assets/
 │   ├── china.txt          # 中国史主干 24 个事件
 │   ├── extra_china.txt    # 中国史补充 6 个
 │   ├── more_china.txt     # 中国史扩充 18 个
+│   ├── more2_china.txt    # 中国史再扩充 25 个
 │   ├── world.txt          # 世界史主干 26 个
 │   ├── extra_world.txt    # 世界史补充 8 个
-│   └── more_world.txt     # 世界史扩充 18 个
+│   ├── more_world.txt     # 世界史扩充 18 个
+│   └── more2_world.txt    # 世界史再扩充 25 个
 └── Scripts/AI/Knowledge/
     ├── KnowledgeSettings.cs         # ScriptableObject 配置，含 baseUrl
     ├── KnowledgeClient.cs           # 主程序入口
@@ -59,8 +61,9 @@ Assets/
     └── Editor/KnowledgeEditorTools.cs
 ```
 
-当前语料：**100 个事件 / 774 个文本块 / 160 条来源**。
-中国史 48 个（古代 36、近现代 12）；世界史 52 个（古代 10、中古 13、近代 19、现代 10）。
+当前语料：**150 个事件 / 1074 个文本块 / 224 条来源**。
+中国史 73 个（古代 48、近现代 25）；世界史 77 个（古代 15、中古 18、近代 26、现代 18）。
+逐事件目录见 [`Docs/KnowledgeEvents.md`](KnowledgeEvents.md)。
 
 ## 3. 快速开始
 
@@ -185,16 +188,16 @@ Unity `Resources.LoadAll<TextAsset>` 在编辑器、Windows 和 Android 包内�
 ## 9. 验证
 
 - 全部 C# 文件已用 Roslyn 编译通过。
-- 使用最小 Unity API 桩运行完整链路，**321 项断言通过**：
-  - 100 个事件、774 个文本块加载成功；
-  - 100/100 个事件标题解析到自身，100/100 标题检索排名第一；
+- 使用最小 Unity API 桩运行完整链路，**470 项断言通过**：
+  - 150 个事件、1074 个文本块加载成功；
+  - 150/150 个事件标题解析到自身，150/150 标题检索排名第一；
   - 口语查询、时代过滤、事件卡片、上下文预算、索引写入与二次加载通过；
   - 远端无 Key / 失败时本地降级与检索通过。
 - 当前机器未安装 Unity Editor，未声称做过编辑器内 Play 验证；在目标 Unity 2022.3 中可用 `KnowledgeTester` 和 Validate Corpus 菜单复验。
 
 ## 10. 边界
 
-- 100 个事件是课程级精选知识，不是全量史料库；未收录事件走通用检索。
+- 150 个事件是课程级精选知识，不是全量史料库；未收录事件走通用检索。
 - 本地向量主要做词面匹配；对没有共同字面的复杂语义问法，应使用远端嵌入模型。
 - 千级文本块使用精确向量检索，避免 ANN 原生依赖；未来达到十万级再考虑托管兼容的近似索引。
 - 模型端点的 rerank 返回格式并不完全统一，客户端兼容 `results/data/scores` 以及字符串/对象两种 documents 请求形式。

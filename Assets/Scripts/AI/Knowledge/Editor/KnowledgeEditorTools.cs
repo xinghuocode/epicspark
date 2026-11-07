@@ -26,6 +26,12 @@ namespace EpicSpark.AI.Knowledge.Editor
                         || item.sections.process.Length < 40
                         || item.sections.impact.Length < 40)
                         throw new InvalidOperationException("必需章节内容过短: " + item.id);
+
+                    KnowledgeMatch match = KnowledgeCorpus.Resolve(events, item.title);
+                    if (match == null || match.event_id != item.id)
+                        throw new InvalidOperationException(
+                            "事件标题解析冲突: " + item.title + " -> "
+                            + (match == null ? "null" : match.event_id));
                 }
                 Debug.Log("[Knowledge] 语料校验通过: " + events.Count + " 个事件 / " + chunks.Count
                     + " 个文本块 / 指纹 " + KnowledgeCorpus.Fingerprint(chunks).Substring(0, 12));
