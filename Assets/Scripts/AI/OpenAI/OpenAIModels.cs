@@ -12,10 +12,18 @@ namespace EpicSpark.AI.OpenAI
     {
         public string role;
         public string content;
+        /// <summary>assistant 消息携带的工具调用(仅响应侧反序列化/请求侧回传时使用)。</summary>
+        public ToolCall[] tool_calls;
+        /// <summary>role 为 "tool" 的消息必须携带对应 tool_calls 元素的 id。</summary>
+        public string tool_call_id;
 
         public static ChatMessage System(string content) => new ChatMessage { role = "system", content = content };
         public static ChatMessage User(string content) => new ChatMessage { role = "user", content = content };
         public static ChatMessage Assistant(string content) => new ChatMessage { role = "assistant", content = content };
+
+        /// <summary>构造 tool 角色的工具结果消息。</summary>
+        public static ChatMessage Tool(string toolCallId, string content) =>
+            new ChatMessage { role = "tool", tool_call_id = toolCallId, content = content };
     }
 
     /// <summary>聊天请求的可选参数。未设置的字段不会出现在请求体中。</summary>
@@ -24,7 +32,46 @@ namespace EpicSpark.AI.OpenAI
         public float? temperature;
         public int? maxTokens;
         public bool stream;
-        // TODO: 后续按需扩展: top_p, stop, response_format, tools / tool_choice, seed 等
+        /// <summary>Function Calling 工具列表(原生 tool call)。设置后服务端可返回 message.tool_calls。</summary>
+        public ToolDefinition[] tools;
+        /// <summary>工具选择策略, 例如 "auto" / "required" / "none"。默认不发送。</summary>
+        public string toolChoice;
+        // TODO: 后续按需扩展: top_p, stop, response_format, parallel_tool_calls, seed 等
+    }
+
+    // ============ Function Calling (Tools) ============
+
+    /// <summary>工具定义(请求侧)。parameters 为 JSON Schema 原文。</summary>
+    [Serializable]
+    public class ToolDefinition
+    {
+        public string type = "function";
+        public ToolFunctionInfo function;
+    }
+
+    [Serializable]
+    public class ToolFunctionInfo
+    {
+        public string name;
+        public string description;
+        /// <summary>参数 JSON Schema 原文(不转义地嵌入请求体)。</summary>
+        public string parameters;
+    }
+
+    /// <summary>assistant 消息中的工具调用(响应侧)。arguments 为 JSON 字符串, 需自行解析。</summary>
+    [Serializable]
+    public class ToolCall
+    {
+        public string id;
+        public string type;
+        public ToolCallFunction function;
+    }
+
+    [Serializable]
+    public class ToolCallFunction
+    {
+        public string name;
+        public string arguments;
     }
 
     // ============ 响应侧 DTO (供 JsonUtility 反序列化) ============
@@ -128,11 +175,47 @@ namespace EpicSpark.AI.OpenAI
             for (int i = 0; i < messages.Count; i++)
             {
                 if (i > 0) sb.Append(',');
-                sb.Append("{\"role\":").Append(Escape(messages[i].role));
-                sb.Append(",\"content\":").Append(Escape(messages[i].content));
+                var msg = messages[i];
+                sb.Append("{\"role\":").Append(Escape(msg.role));
+                sb.Append(",\"content\":").Append(Escape(msg.content ?? ""));
+                if (!string.IsNullOrEmpty(msg.tool_call_id))
+                    sb.Append(",\"tool_call_id\":").Append(Escape(msg.tool_call_id));
+                if (msg.tool_calls != null && msg.tool_calls.Length > 0)
+                {
+                    sb.Append(",\"tool_calls\":[");
+                    for (int j = 0; j < msg.tool_calls.Length; j++)
+                    {
+                        if (j > 0) sb.Append(',');
+                        var tc = msg.tool_calls[j];
+                        sb.Append("{\"id\":").Append(Escape(tc.id ?? ""));
+                        sb.Append(",\"type\":").Append(Escape(tc.type ?? "function"));
+                        sb.Append(",\"function\":{\"name\":").Append(Escape(tc.function?.name ?? ""));
+                        // OpenAI 协议: arguments 是 JSON 编码的字符串(需转义), 不是内嵌对象
+                        sb.Append(",\"arguments\":").Append(Escape(string.IsNullOrEmpty(tc.function?.arguments) ? "{}" : tc.function.arguments));
+                        sb.Append("}}");
+                    }
+                    sb.Append(']');
+                }
                 sb.Append('}');
             }
             sb.Append(']');
+            if (options.tools != null && options.tools.Length > 0)
+            {
+                sb.Append(",\"tools\":[");
+                for (int i = 0; i < options.tools.Length; i++)
+                {
+                    if (i > 0) sb.Append(',');
+                    var t = options.tools[i];
+                    sb.Append("{\"type\":").Append(Escape(t.type ?? "function"));
+                    sb.Append(",\"function\":{\"name\":").Append(Escape(t.function?.name ?? ""));
+                    sb.Append(",\"description\":").Append(Escape(t.function?.description ?? ""));
+                    sb.Append(",\"parameters\":").Append(string.IsNullOrEmpty(t.function?.parameters) ? "\"{}\"" : t.function.parameters);
+                    sb.Append("}}");
+                }
+                sb.Append(']');
+                if (!string.IsNullOrEmpty(options.toolChoice))
+                    sb.Append(",\"tool_choice\":").Append(Escape(options.toolChoice));
+            }
             if (options.temperature.HasValue)
                 sb.Append(",\"temperature\":").Append(options.temperature.Value);
             if (options.maxTokens.HasValue)

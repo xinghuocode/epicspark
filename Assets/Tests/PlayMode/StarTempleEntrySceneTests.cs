@@ -18,10 +18,6 @@ namespace EpicSpark.MovementTest.Tests
             Assert.That(scenes.Length, Is.EqualTo(1), "发布构建列表只能保留玩法入口场景");
             Assert.That(scenes[0].path, Is.EqualTo(EntryScenePath));
             Assert.That(scenes[0].enabled, Is.True, "玩法入口场景必须启用且位于索引 0");
-
-            var playModeStartScene = UnityEditor.SceneManagement.EditorSceneManager.playModeStartScene;
-            Assert.That(playModeStartScene, Is.Not.Null, "编辑器 Play Mode 也必须指定入口场景");
-            Assert.That(UnityEditor.AssetDatabase.GetAssetPath(playModeStartScene), Is.EqualTo(EntryScenePath));
         }
 #endif
 

@@ -18,7 +18,7 @@ namespace SparkCode.Generation
     /// </summary>
     public static class StarTempleGameplaySetup
     {
-        public const string GameplayScene = StarTempleEntryScene.ScenePath;
+        public const string GameplayScene = "Assets/Scenes/BlenderStarTemple_Gameplay.unity";
         const string Generated = "Assets/Generated/BlenderStarTempleURP";
         public const string PlayerName = "StarTemple_Player";
         static readonly Vector3 SpawnPosition = new Vector3(0f, 0.25f, 10.2f);
@@ -57,7 +57,11 @@ namespace SparkCode.Generation
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene, GameplayScene))
                     throw new InvalidOperationException("Could not save " + GameplayScene);
-                StarTempleEntryScene.Configure();
+                // 发布构建列表只保留玩法入口场景(编辑器 Play 不再强制起始场景)
+                EditorBuildSettings.scenes = new[]
+                {
+                    new EditorBuildSettingsScene(GameplayScene, true)
+                };
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
                 Validate();

@@ -1,7 +1,10 @@
 {
     "name": "EpicSpark.AI",
     "rootNamespace": "EpicSpark.AI",
-    "references": [],
+    "references": [
+        "glTFast",
+        "Unity.InputSystem"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "autoReferenced": true,

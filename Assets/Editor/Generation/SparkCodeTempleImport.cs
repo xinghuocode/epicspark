@@ -113,7 +113,7 @@ namespace SparkCode.Generation
                 bool saved = EditorSceneManager.SaveScene(scene, ScenePath);
                 if (!saved) throw new InvalidOperationException("Failed to save " + ScenePath);
 
-                // Development preview only; the supported entry scene is configured by StarTempleEntryScene.
+                // Development preview only; 发布构建入口场景由 StarTempleGameplaySetup 配置。
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
