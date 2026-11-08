@@ -18,7 +18,7 @@ flowchart LR
     RR --> CX[事件卡片 / 提示词上下文]
     CX --> S
     S --> A[剧情 Agent]
-    D[Resources/Knowledge/Events<br/>1100 个事件 JSONL] --> E
+    D[Resources/Knowledge/Events<br/>1200 个事件 JSONL] --> E
     E --> IDX[Application.persistentDataPath<br/>向量索引]
     E -.可选.-> M[baseUrl 指定的<br/>Embedding / Rerank 模型端点]
 ```
@@ -84,7 +84,11 @@ Assets/
 │   ├── more12_world_ancient.txt  # 世界史专项四·古代 25 个
 │   ├── more12_world_medieval.txt # 世界史专项四·中古 25 个
 │   ├── more12_world_early_modern.txt # 世界史专项四·近代 25 个
-│   └── more12_world_modern.txt   # 世界史专项四·现代 25 个
+│   ├── more12_world_modern.txt   # 世界史专项四·现代 25 个
+│   ├── more13_world_ancient.txt  # 世界史专项五·古代 25 个
+│   ├── more13_world_medieval.txt # 世界史专项五·中古 25 个
+│   ├── more13_world_early_modern.txt # 世界史专项五·近代 25 个
+│   └── more13_world_modern.txt   # 世界史专项五·现代 25 个
 └── Scripts/AI/Knowledge/
     ├── KnowledgeSettings.cs         # ScriptableObject 配置，含 baseUrl
     ├── KnowledgeClient.cs           # 主程序入口
@@ -99,8 +103,8 @@ Assets/
     └── Editor/KnowledgeEditorTools.cs
 ```
 
-当前语料：**1100 个事件 / 6570 个文本块 / 1474 条来源**。
-中国史 348 个（古代 183、近现代 165）；世界史 752 个（古代 184、中古 184、近代 183、现代 201），占比 **68.4%**。
+当前语料：**1200 个事件 / 7145 个文本块 / 1622 条来源**。
+中国史 348 个（古代 183、近现代 165）；世界史 852 个（古代 209、中古 209、近代 208、现代 226），占比 **71%**。
 逐事件目录见 [`Docs/KnowledgeEvents.md`](KnowledgeEvents.md)。
 
 ## 3. 快速开始
@@ -226,16 +230,16 @@ Unity `Resources.LoadAll<TextAsset>` 在编辑器、Windows 和 Android 包内�
 ## 9. 验证
 
 - 全部 C# 文件已用 Roslyn 编译通过。
-- 使用最小 Unity API 桩运行完整链路，**3320 项断言通过**：
-  - 1100 个事件、6570 个文本块加载成功；
-  - 1100/1100 个事件标题解析到自身，1100/1100 标题检索排名第一；
+- 使用最小 Unity API 桩运行完整链路，**3620 项断言通过**：
+  - 1200 个事件、7145 个文本块加载成功；
+  - 1200/1200 个事件标题解析到自身，1200/1200 标题检索排名第一；
   - 口语查询、时代过滤、事件卡片、上下文预算、索引写入与二次加载通过；
   - 远端无 Key / 失败时本地降级与检索通过。
 - 当前机器未安装 Unity Editor，未声称做过编辑器内 Play 验证；在目标 Unity 2022.3 中可用 `KnowledgeTester` 和 Validate Corpus 菜单复验。
 
 ## 10. 边界
 
-- 1100 个事件是课程级精选知识，不是全量史料库；未收录事件走通用检索。
+- 1200 个事件是课程级精选知识，不是全量史料库；未收录事件走通用检索。
 - 本地向量主要做词面匹配；对没有共同字面的复杂语义问法，应使用远端嵌入模型。
 - 千级文本块使用精确向量检索，避免 ANN 原生依赖；未来达到十万级再考虑托管兼容的近似索引。
 - 模型端点的 rerank 返回格式并不完全统一，客户端兼容 `results/data/scores` 以及字符串/对象两种 documents 请求形式。
