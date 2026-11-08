@@ -94,3 +94,7 @@ ehthumbs.db
 # 两份独立工程的本地副本（对应远端 model / feature-knowledge-rag 分支，不纳入本仓库）
 /epicspark-model/
 /epicspark-feature-knowledge-rag/
+
+# ---------------------------- Python cache ----------------------------
+__pycache__/
+*.pyc

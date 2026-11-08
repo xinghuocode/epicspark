@@ -37,6 +37,8 @@ namespace EpicSpark.Npc.Runtime
         private float _pauseUntil;
         private CharacterController _controller;
         private bool _initialized;
+        /// <summary>被空气墙 / 墙体挡住且几乎没有位移的累计时间：超过阈值就跳过当前路点，避免 NPC 卡死。</summary>
+        private float _stuckSeconds;
 
         private void Awake()
         {
@@ -80,6 +82,7 @@ namespace EpicSpark.Npc.Runtime
             _speed = Mathf.Max(0.05f, speed);
             _index = 0;
             _pauseUntil = 0f;
+            _stuckSeconds = 0f;
         }
 
         public void SetMovementEnabled(bool enabled)
@@ -120,7 +123,11 @@ namespace EpicSpark.Npc.Runtime
         private void Patrol()
         {
             if (_waypoints.Count == 0) return;
-            if (Time.time < _pauseUntil) return;
+            if (Time.time < _pauseUntil)
+            {
+                _stuckSeconds = 0f;
+                return;
+            }
 
             if (_index >= _waypoints.Count)
             {
@@ -141,14 +148,37 @@ namespace EpicSpark.Npc.Runtime
             {
                 _pauseUntil = Time.time + Random.Range(waypointPauseMin, Mathf.Max(waypointPauseMin, waypointPauseMax));
                 _index++;
+                _stuckSeconds = 0f;
                 return;
             }
 
             Vector3 direction = toTarget.normalized;
             Vector3 next = transform.position + direction * _speed * Time.deltaTime;
             if (snapToGround) next.y = SampleGround(next.y);
+
+            Vector3 before = transform.position;
             MoveTo(next);
             SmoothLookAt(transform.position + direction * 2f);
+
+            // 模型空气墙 / 场景墙体挡住去路时，CharacterController 会停在原地。
+            // 持续 1.2 秒几乎没动就放弃当前路点，防止 NPC 永远顶在墙上（不穿模，也不卡死）。
+            Vector3 moved = transform.position - before;
+            moved.y = 0f;
+            float expected = _speed * Mathf.Max(0.0001f, Time.deltaTime) * 0.25f;
+            if (moved.magnitude < expected)
+            {
+                _stuckSeconds += Time.deltaTime;
+                if (_stuckSeconds > 1.2f)
+                {
+                    _stuckSeconds = 0f;
+                    _index++;
+                    _pauseUntil = Time.time + 0.2f;
+                }
+            }
+            else
+            {
+                _stuckSeconds = 0f;
+            }
         }
 
         private void MoveTo(Vector3 worldPosition)

@@ -1,4 +1,4 @@
-﻿// 搭建 Agent：把灰盒语义槽逐个绑定成美术资产。
+// 搭建 Agent：把灰盒语义槽逐个绑定成美术资产。
 // 规则（设计文档「滑块」）：
 //   sliderValue = 1 → 容忍度 0（最严格）→ 复用门槛相似度 1.0 → 正常永远不满足 → 总是现生成；
 //   sliderValue = 0 → 容忍度 1（最宽松）→ 门槛 0 → 任何现有资产都接受。
@@ -93,8 +93,22 @@ namespace EpicSpark.Build
 
             EnsureStoryUnits(scene, plan, result);
 
+            // 空间约束：模型互不穿模、NPC / 锚点不落在模型内、出生点与巡逻路点在可行走区域。
+            // 装配阶段拿到模型真实包围盒后还会再复核一次；这里先按请求尺寸把布局摆正，保证 BuildResult 自身自洽。
+            var placement = new PlacementReport();
+            try
+            {
+                ScenePlacementSolver.ApplyPlacementConstraints(plan, result, placement);
+            }
+            catch (Exception e)
+            {
+                AddWarning(result, "空间约束求解异常（场景仍会生成）：" + e.Message);
+            }
+            placement.AppendTo(result.warnings);
+
             Debug.Log("[搭建] 完成：落位 " + result.placed.Count + " 个，现生成 " + result.generationCount
-                + " 个，warning " + result.warnings.Count + " 条。");
+                + " 个，warning " + result.warnings.Count + " 条；约束调整模型 " + placement.movedModels
+                + " 次 / NPC 与锚点 " + placement.movedActors + " 个。");
             return result;
         }
 

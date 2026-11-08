@@ -407,7 +407,7 @@ namespace EpicSpark.EditorTools
                 Note("npc=" + npc.Spec.displayName + " hp=" + before.ToString("F0") + "→" + npc.Health.CurrentHp.ToString("F0")
                      + " 血条=" + (npc.Health.HealthBar != null));
 
-                Func<NpcSpec, string, Task<string>> handler = NpcDialogueTrigger.ReplyHandler;
+                Func<NpcSpec, string, IReadOnlyList<string>, Task<string>> handler = NpcDialogueTrigger.ReplyHandler;
                 if (handler == null)
                 {
                     Note("系统阶段：对话回调未接线");
@@ -415,7 +415,7 @@ namespace EpicSpark.EditorTools
                     return;
                 }
                 _dialogueNpc = npc.Spec.displayName;
-                try { _dialogueTask = handler(npc.Spec, "这里发生了什么？"); }
+                try { _dialogueTask = handler(npc.Spec, "这里发生了什么？", new List<string>()); }
                 catch (Exception e) { Note("系统阶段：对话调用异常 " + e.Message); Finish(2); }
                 return;
             }

@@ -1,4 +1,4 @@
-﻿// 场景装配：把「剧情 SceneSpec + 灰盒 GrayboxPlan + 搭建 BuildResult」变成可游玩的世界。
+// 场景装配：把「剧情 SceneSpec + 灰盒 GrayboxPlan + 搭建 BuildResult」变成可游玩的世界。
 // 这里是四层 Agent 流水线的落地端——所有资产都通过自研 GLB 加载器进入引擎。
 using System;
 using System.Collections.Generic;
@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using EpicSpark.Core;
+using EpicSpark.Build;
 using EpicSpark.Npc.Runtime;
 using EpicSpark.Anchors;
 
@@ -26,6 +27,17 @@ namespace EpicSpark.Loading
         public Vector3 spawnPoint = new Vector3(0f, 1.2f, 0f);
         public float width = 60f;
         public float length = 60f;
+
+        /// <summary>场景里墙体 / 栅栏的平面包围盒（固定障碍，不参与推动）。</summary>
+        public List<PlacementFootprint> wallFootprints = new List<PlacementFootprint>();
+        /// <summary>按模型真实网格包围盒算出的平面包围盒（用于「不穿模」最终复核）。</summary>
+        public List<PlacementFootprint> modelFootprints = new List<PlacementFootprint>();
+        /// <summary>模型 + 墙体的全部空间障碍，供 NPC / 锚点找空地使用。</summary>
+        public List<PlacementFootprint> obstacles = new List<PlacementFootprint>();
+        /// <summary>已解析出的 NPC / 锚点世界坐标（按 bindId 缓存，场景复用时沿用）。</summary>
+        public Dictionary<string, Vector3> actorPositions = new Dictionary<string, Vector3>(StringComparer.Ordinal);
+        /// <summary>已生成的空气墙（不可见碰撞体）数量。</summary>
+        public int airWallCount;
     }
 
     /// <summary>单个已放置模型的运行时视图。</summary>
@@ -39,6 +51,10 @@ namespace EpicSpark.Loading
         public Material flatMaterial;
         public float distance;
         public bool revealed;
+        /// <summary>模型网格的局部包围盒（未缩放），用于按真实尺寸计算空气墙与穿模约束。</summary>
+        public Bounds localBounds;
+        /// <summary>加载动画用的棱线对象；模型被约束求解挪动时需要一起平移。</summary>
+        public GameObject wireObject;
     }
 
     public static class SceneAssembler
@@ -129,6 +145,23 @@ namespace EpicSpark.Loading
             else if (spec != null)
                 instance.spawnPoint = new Vector3(spec.spawnPoint.x, Mathf.Max(1.2f, spec.spawnPoint.y), spec.spawnPoint.z);
 
+            var placedBySlot = new Dictionary<string, PlacedAsset>(StringComparer.Ordinal);
+            var unitByBindId = new Dictionary<string, PlacedAsset>(StringComparer.Ordinal);
+            if (build != null && build.placed != null)
+            {
+                foreach (PlacedAsset placed in build.placed)
+                {
+                    if (placed == null) continue;
+                    if (!string.IsNullOrEmpty(placed.slotId) && !placedBySlot.ContainsKey(placed.slotId))
+                        placedBySlot[placed.slotId] = placed;
+                    if (!string.IsNullOrEmpty(placed.bindId) && !unitByBindId.ContainsKey(placed.bindId))
+                    {
+                        if (placed.kind == SlotKind.Npc || placed.kind == SlotKind.Anchor)
+                            unitByBindId[placed.bindId] = placed;
+                    }
+                }
+            }
+
             if (build != null && build.placed != null)
             {
                 foreach (PlacedAsset placed in build.placed)
@@ -141,8 +174,13 @@ namespace EpicSpark.Loading
                 }
             }
 
-            CreateAnchors(spec, plan, instance);
-            CreateNpcs(spec, plan, instance);
+            // 用模型的真实网格包围盒做最终复核：彻底消除因「等比缩放」造成的尺寸误差重叠，
+            // 并建立「模型 + 墙体」障碍集合，供 NPC / 锚点 / 出生点找空地。
+            ResolveModelFootprints(instance, placedBySlot);
+
+            CreateAnchors(spec, plan, instance, unitByBindId);
+            CreateNpcs(spec, plan, instance, unitByBindId);
+            ResolveSpawnPoint(instance);
 
             return instance;
         }
@@ -164,6 +202,78 @@ namespace EpicSpark.Loading
             if (renderer != null) renderer.sharedMaterial = GroundMaterial;
 
             BuildGroundPlan(plan, instance);
+            BuildBoundaryAirWalls(instance);
+        }
+
+        // ─────────────────────────── 空气墙 ───────────────────────────
+
+        /// <summary>模型空气墙的额外外扩量（米）：让玩家贴墙时相机不会穿进模型表面。</summary>
+        private const float AirWallPadding = 0.05f;
+
+        /// <summary>
+        /// 给单个被摆放的模型挂一个不可见的 BoxCollider 空气墙（跟随模型缩放与旋转）。
+        /// 模型本身只有 MeshRenderer，没有碰撞体，玩家会直接穿过；这里按网格局部包围盒补上。
+        /// </summary>
+        private static void AddModelAirWall(SceneInstance instance, GameObject modelGo, Bounds localBounds, float uniformScale)
+        {
+            if (modelGo == null) return;
+            var wall = new GameObject("AirWall");
+            wall.transform.SetParent(modelGo.transform, false);
+            wall.transform.localPosition = Vector3.zero;
+            wall.transform.localRotation = Quaternion.identity;
+            wall.transform.localScale = Vector3.one;
+
+            var box = wall.AddComponent<BoxCollider>();
+            float pad = AirWallPadding / Mathf.Max(0.0001f, Mathf.Abs(uniformScale));
+            Vector3 size = localBounds.size;
+            size.x = Mathf.Max(0.02f, size.x + pad * 2f);
+            size.y = Mathf.Max(0.02f, size.y + pad * 2f);
+            size.z = Mathf.Max(0.02f, size.z + pad * 2f);
+            box.center = localBounds.center;
+            box.size = size;
+            box.isTrigger = false;
+
+            if (instance != null) instance.airWallCount++;
+        }
+
+        /// <summary>
+        /// 场景边界空气墙：地面 Plane 是有限的，没有围墙时玩家会走出场景掉下去。
+        /// 放在场景边缘内侧，不可见、不可穿透。
+        /// </summary>
+        private static void BuildBoundaryAirWalls(SceneInstance instance)
+        {
+            if (instance == null || instance.root == null) return;
+            var root = new GameObject("BoundaryAirWalls");
+            root.transform.SetParent(instance.root.transform, false);
+
+            float halfW = Mathf.Max(4f, instance.width * 0.5f);
+            float halfL = Mathf.Max(4f, instance.length * 0.5f);
+            const float height = 8f;
+            const float thickness = 0.4f;
+
+            AddBoundaryWall(root.transform, "Boundary_West",
+                new Vector3(-halfW + thickness * 0.5f, height * 0.5f, 0f),
+                new Vector3(thickness, height, instance.length));
+            AddBoundaryWall(root.transform, "Boundary_East",
+                new Vector3(halfW - thickness * 0.5f, height * 0.5f, 0f),
+                new Vector3(thickness, height, instance.length));
+            AddBoundaryWall(root.transform, "Boundary_South",
+                new Vector3(0f, height * 0.5f, -halfL + thickness * 0.5f),
+                new Vector3(instance.width, height, thickness));
+            AddBoundaryWall(root.transform, "Boundary_North",
+                new Vector3(0f, height * 0.5f, halfL - thickness * 0.5f),
+                new Vector3(instance.width, height, thickness));
+        }
+
+        private static void AddBoundaryWall(Transform parent, string name, Vector3 center, Vector3 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = center;
+            var box = go.AddComponent<BoxCollider>();
+            box.center = Vector3.zero;
+            box.size = size;
+            box.isTrigger = false;
         }
 
         // ─────────────────────────── 地编：地面分区与道路 ───────────────────────────
@@ -196,7 +306,7 @@ namespace EpicSpark.Loading
                     GrayboxPath path = plan.paths[i];
                     if (path == null || path.nodes == null || path.nodes.Count < 2) continue;
                     if (path.kind == "wall" || path.kind == "fence")
-                        BuildWallSegments(path, root.transform, i);
+                        BuildWallSegments(path, root.transform, i, instance);
                     else
                         BuildRoadStrips(path, root.transform, i);
                 }
@@ -270,7 +380,7 @@ namespace EpicSpark.Loading
             }
         }
 
-        private static void BuildWallSegments(GrayboxPath path, Transform parent, int index)
+        private static void BuildWallSegments(GrayboxPath path, Transform parent, int index, SceneInstance instance)
         {
             var group = new GameObject("Wall_" + index);
             group.transform.SetParent(parent, false);
@@ -293,6 +403,14 @@ namespace EpicSpark.Loading
                 wall.transform.rotation = Quaternion.Euler(0f, -Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg, 0f);
                 var renderer = wall.GetComponent<MeshRenderer>();
                 if (renderer != null) renderer.sharedMaterial = WallMaterial;
+
+                // 墙体是固定障碍：模型 / NPC / 锚点 / 出生点都要避开它。
+                if (instance != null)
+                {
+                    PlacementFootprint footprint = ScenePlacementSolver.CreateWallFootprint(
+                        a, b, (path.pathId ?? ("wall_" + index)) + "_" + i);
+                    if (footprint != null) instance.wallFootprints.Add(footprint);
+                }
             }
         }
 
@@ -389,7 +507,10 @@ namespace EpicSpark.Loading
             go.transform.position = new Vector3(worldPos.x, bottomOffset, worldPos.z);
             go.transform.rotation = Quaternion.Euler(0f, placed.rotationY, 0f);
 
-            CreateWireframe(go, model, instance);
+            // 空气墙：模型只有 MeshRenderer，玩家原本会直接穿过去；按网格局部包围盒补一个不可见碰撞体。
+            AddModelAirWall(instance, go, bounds, scaleY);
+
+            GameObject wire = CreateWireframe(go, model, instance);
 
             return new ModelView
             {
@@ -400,6 +521,8 @@ namespace EpicSpark.Loading
                 model = model,
                 flatMaterial = FlatMaterial,
                 distance = Vector3.Distance(instance.spawnPoint, go.transform.position),
+                localBounds = bounds,
+                wireObject = wire,
             };
         }
 
@@ -413,6 +536,15 @@ namespace EpicSpark.Loading
             go.transform.rotation = Quaternion.Euler(0f, placed.rotationY, 0f);
             var renderer = go.GetComponent<MeshRenderer>();
             if (renderer != null) renderer.sharedMaterial = FlatMaterial;
+
+            // 占位方块自带 BoxCollider，正好作为空气墙；这里额外记录数量，便于审计。
+            Collider fallbackCollider = go.GetComponent<Collider>();
+            if (fallbackCollider != null)
+            {
+                fallbackCollider.isTrigger = false;
+                if (instance != null) instance.airWallCount++;
+            }
+
             return new ModelView
             {
                 slotId = placed.slotId,
@@ -422,13 +554,15 @@ namespace EpicSpark.Loading
                 model = null,
                 flatMaterial = FlatMaterial,
                 distance = Vector3.Distance(instance.spawnPoint, go.transform.position),
+                localBounds = new Bounds(Vector3.zero, Vector3.one),
+                wireObject = null,
             };
         }
 
         /// <summary>为模型生成蓝色线的「棱」，作为显现阶段的矢量图。</summary>
-        private static void CreateWireframe(GameObject target, GlbModel model, SceneInstance instance)
+        private static GameObject CreateWireframe(GameObject target, GlbModel model, SceneInstance instance)
         {
-            if (model.creasedEdges == null || model.creasedEdges.Length < 2) return;
+            if (model.creasedEdges == null || model.creasedEdges.Length < 2) return null;
             var wire = new GameObject("wire");
             wire.transform.SetParent(target.transform, false);
             wire.transform.localPosition = Vector3.zero;
@@ -452,17 +586,132 @@ namespace EpicSpark.Loading
             wire.transform.rotation = target.transform.rotation;
             wire.transform.localScale = target.transform.localScale;
             target.transform.SetParent(instance.modelRoot.transform, true);
+            return wire;
+        }
+
+        // ─────────────────────────── 模型真实包围盒复核 ───────────────────────────
+
+        /// <summary>
+        /// 模型加载完成后，用网格真实包围盒（而不是搭建阶段请求的尺寸）复核一遍「不允许穿模」：
+        /// 等比缩放会让实际占地与请求尺寸不相等，这里以真实几何为准再分离一次；
+        /// 同时把「模型 + 墙体」写入实例障碍集合，供 NPC / 锚点 / 出生点避让。
+        /// </summary>
+        private static void ResolveModelFootprints(SceneInstance instance, Dictionary<string, PlacedAsset> placedBySlot)
+        {
+            if (instance == null) return;
+
+            var footprints = new List<PlacementFootprint>(instance.models.Count);
+            var originals = new List<Vector2>(instance.models.Count);
+            for (int i = 0; i < instance.models.Count; i++)
+            {
+                PlacementFootprint footprint = BuildWorldFootprint(instance.models[i], placedBySlot);
+                if (footprint == null) continue;
+                footprints.Add(footprint);
+                originals.Add(footprint.center);
+            }
+
+            var report = new PlacementReport();
+            ScenePlacementSolver.ResolveModelOverlaps(
+                footprints, instance.wallFootprints, instance.width * 0.5f, instance.length * 0.5f, report);
+
+            // 把求解结果同步到 GameObject、加载动画的棱线与 PlacedAsset（用于调试落盘）。
+            for (int i = 0; i < footprints.Count; i++)
+            {
+                PlacementFootprint footprint = footprints[i];
+                Vector2 delta = footprint.center - originals[i];
+                if (delta.sqrMagnitude < 0.000001f) continue;
+
+                ModelView view = instance.models[i];
+                if (view == null || view.gameObject == null) continue;
+                view.gameObject.transform.position += new Vector3(delta.x, 0f, delta.y);
+                if (view.wireObject != null)
+                    view.wireObject.transform.position += new Vector3(delta.x, 0f, delta.y);
+
+                PlacedAsset asset = null;
+                if (placedBySlot != null) placedBySlot.TryGetValue(view.slotId, out asset);
+                if (asset != null)
+                {
+                    asset.position += new Vector3(delta.x, 0f, delta.y);
+                    asset.sizeX = Mathf.Max(0.1f, footprint.halfX * 2f);
+                    asset.sizeY = Mathf.Max(0.1f, footprint.halfY * 2f);
+                }
+            }
+
+            instance.modelFootprints.AddRange(footprints);
+            for (int i = 0; i < instance.wallFootprints.Count; i++) instance.obstacles.Add(instance.wallFootprints[i]);
+            for (int i = 0; i < footprints.Count; i++) instance.obstacles.Add(footprints[i]);
+
+            Debug.Log("[装配] 空气墙 " + instance.airWallCount + " 个；模型真实包围盒复核："
+                + instance.models.Count + " 个模型 / " + instance.wallFootprints.Count + " 段墙体，"
+                + "约束重定位 " + report.resolvedOverlapPairs + " 对，残留重叠 " + report.unresolvedOverlaps + " 对。");
+            if (report.unresolvedOverlaps > 0)
+                Debug.LogWarning("[装配] 仍有 " + report.unresolvedOverlaps + " 对模型包围盒重叠！");
+            for (int i = 0; i < report.warnings.Count; i++) Debug.LogWarning("[装配] " + report.warnings[i]);
+        }
+
+        /// <summary>按模型当前的 world transform 与网格局部包围盒，构造真实平面 OBB。</summary>
+        private static PlacementFootprint BuildWorldFootprint(ModelView view, Dictionary<string, PlacedAsset> placedBySlot)
+        {
+            if (view == null || view.gameObject == null) return null;
+            Transform transform = view.gameObject.transform;
+            Bounds local = view.localBounds;
+            Vector3 worldCenter = transform.TransformPoint(local.center);
+            Vector3 lossy = transform.lossyScale;
+
+            float mobility = 1f;
+            PlacedAsset asset = null;
+            if (placedBySlot != null) placedBySlot.TryGetValue(view.slotId, out asset);
+            if (asset != null) mobility = ScenePlacementSolver.MobilityFor(asset);
+
+            return new PlacementFootprint
+            {
+                id = view.slotId,
+                center = new Vector2(worldCenter.x, worldCenter.z),
+                halfX = Mathf.Max(0.05f, Mathf.Abs(local.size.x * lossy.x) * 0.5f),
+                halfY = Mathf.Max(0.05f, Mathf.Abs(local.size.z * lossy.z) * 0.5f),
+                rotationY = transform.eulerAngles.y,
+                movable = true,
+                mobility = mobility,
+            };
+        }
+
+        /// <summary>出生点最后复核：绝不允许出生在模型或墙体内部。</summary>
+        private static void ResolveSpawnPoint(SceneInstance instance)
+        {
+            if (instance == null) return;
+            float halfW = instance.width * 0.5f;
+            float halfL = instance.length * 0.5f;
+            Vector2 spawn = new Vector2(instance.spawnPoint.x, instance.spawnPoint.z);
+            if (ScenePlacementSolver.IsPointFree(spawn, ScenePlacementSolver.PlayerClearance,
+                    instance.obstacles, halfW, halfL))
+                return;
+
+            Vector2 free;
+            if (ScenePlacementSolver.TryFindFreePoint(spawn, ScenePlacementSolver.PlayerClearance,
+                    instance.obstacles, halfW, halfL, out free))
+            {
+                instance.spawnPoint = new Vector3(free.x, instance.spawnPoint.y, free.y);
+                Debug.Log("[装配] 出生点原本在模型/墙体内，已挪到空地 (" + free.x.ToString("0.#") + ", " + free.y.ToString("0.#") + ")。");
+            }
+            else
+            {
+                Debug.LogWarning("[装配] 出生点被模型/墙体占据且找不到空地，玩家可能卡住。");
+            }
         }
 
         // ─────────────────────────── 锚点与 NPC ───────────────────────────
 
-        private static void CreateAnchors(SceneSpec spec, GrayboxPlan plan, SceneInstance instance)
+        private static void CreateAnchors(
+            SceneSpec spec,
+            GrayboxPlan plan,
+            SceneInstance instance,
+            Dictionary<string, PlacedAsset> unitByBindId)
         {
             if (spec == null || spec.anchors == null) return;
             foreach (SceneAnchorSpec anchor in spec.anchors)
             {
                 if (anchor == null) continue;
-                Vector3 position = ResolveAnchorPosition(anchor, plan, instance);
+                Vector3 position = ResolveActorPosition(anchor.anchorId, anchor.localPosition, SlotKind.Anchor, plan, instance, unitByBindId);
                 var go = new GameObject("Anchor_" + anchor.anchorId);
                 go.transform.SetParent(instance.root.transform, false);
                 go.transform.position = position;
@@ -472,31 +721,23 @@ namespace EpicSpark.Loading
             }
         }
 
-        private static Vector3 ResolveAnchorPosition(SceneAnchorSpec anchor, GrayboxPlan plan, SceneInstance instance)
-        {
-            float halfW = instance.width * 0.42f;
-            float halfL = instance.length * 0.42f;
-            if (anchor.localPosition != Vector3.zero)
-            {
-                return new Vector3(
-                    Mathf.Clamp(anchor.localPosition.x, -halfW, halfW),
-                    0.05f,
-                    Mathf.Clamp(anchor.localPosition.z, -halfL, halfL));
-            }
-            return new Vector3(halfW * 0.55f, 0.05f, halfL * 0.55f);
-        }
-
-        private static void CreateNpcs(SceneSpec spec, GrayboxPlan plan, SceneInstance instance)
+        private static void CreateNpcs(
+            SceneSpec spec,
+            GrayboxPlan plan,
+            SceneInstance instance,
+            Dictionary<string, PlacedAsset> unitByBindId)
         {
             if (spec == null || spec.npcs == null) return;
             foreach (NpcSpec npc in spec.npcs)
             {
                 if (npc == null) continue;
+                Vector3 position = ResolveActorPosition(npc.npcId, npc.localPosition, SlotKind.Npc, plan, instance, unitByBindId);
+
                 var go = new GameObject("NPC_" + npc.npcId);
                 go.transform.SetParent(instance.root.transform, false);
-                go.transform.position = new Vector3(npc.localPosition.x, 0f, npc.localPosition.z);
+                go.transform.position = position;
 
-                // 占位身体：没有人物美术资产，用胶囊体保证 NPC 可见、可聚焦
+                // 占位身体：没有人物美术资产，用胶囊体保证 NPC 可见、可被准星射线命中。
                 var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
                 body.name = "Body";
                 body.transform.SetParent(go.transform, false);
@@ -504,6 +745,18 @@ namespace EpicSpark.Loading
                 body.transform.localScale = new Vector3(0.55f, 0.9f, 0.55f);
                 var renderer = body.GetComponent<MeshRenderer>();
                 if (renderer != null) renderer.sharedMaterial = CreateNpcMaterial(npc);
+                // 身体碰撞体改成 Trigger：只用于射线交互，不把玩家顶开；移动碰撞交给 CharacterController。
+                Collider bodyCollider = body.GetComponent<Collider>();
+                if (bodyCollider != null) bodyCollider.isTrigger = true;
+
+                // 角色控制器：让 NPC 也被模型空气墙 / 场景墙体挡住，不会走进模型里。
+                var controller = go.AddComponent<CharacterController>();
+                controller.height = 1.8f;
+                controller.radius = 0.35f;
+                controller.center = new Vector3(0f, 0.9f, 0f);
+                controller.skinWidth = 0.04f;
+                controller.stepOffset = 0.3f;
+                controller.slopeLimit = 45f;
 
                 var avatar = go.AddComponent<NpcAvatar>();
                 List<Vector2> route = null;
@@ -515,7 +768,7 @@ namespace EpicSpark.Loading
                     {
                         if (path != null && path.npcId == npc.npcId)
                         {
-                            route = path.waypoints;
+                            route = SanitizeRoute(path.waypoints, instance);
                             loop = path.loop;
                             speed = path.speed;
                             break;
@@ -525,6 +778,136 @@ namespace EpicSpark.Loading
                 avatar.Initialize(npc, route, loop, speed);
                 instance.npcObjects.Add(go);
             }
+        }
+
+        /// <summary>巡逻路点若落在模型 / 墙体内部，就换成最近的空地，避免 NPC 一直往建筑里挤。</summary>
+        private static List<Vector2> SanitizeRoute(List<Vector2> waypoints, SceneInstance instance)
+        {
+            if (waypoints == null || waypoints.Count == 0) return null;
+            float halfW = instance.width * 0.5f;
+            float halfL = instance.length * 0.5f;
+            var result = new List<Vector2>(waypoints.Count);
+            for (int i = 0; i < waypoints.Count; i++)
+            {
+                Vector2 waypoint = waypoints[i];
+                if (!ScenePlacementSolver.IsPointFree(waypoint, ScenePlacementSolver.NpcClearance,
+                        instance.obstacles, halfW, halfL))
+                {
+                    Vector2 free;
+                    if (ScenePlacementSolver.TryFindFreePoint(waypoint, ScenePlacementSolver.NpcClearance,
+                            instance.obstacles, halfW, halfL, out free))
+                        waypoint = free;
+                }
+                result.Add(waypoint);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 决定 NPC / 锚点的最终落点，优先级：
+        ///   1) 搭建阶段已解算好的 PlacedAsset 位置；
+        ///   2) 场景复用时缓存的位置（同一个 bindId）；
+        ///   3) 剧情给的世界坐标；
+        ///   4) 灰盒规划里同 bindId 的槽位；
+        ///   5) 场景内默认安全位置。
+        /// 最后再用「模型 + 墙体」障碍做一次净空检查，必要时挪到最近空地。
+        /// </summary>
+        private static Vector3 ResolveActorPosition(
+            string bindId,
+            Vector3 storyLocalPosition,
+            SlotKind kind,
+            GrayboxPlan plan,
+            SceneInstance instance,
+            Dictionary<string, PlacedAsset> unitByBindId)
+        {
+            float halfW = instance != null ? instance.width * 0.5f : 30f;
+            float halfL = instance != null ? instance.length * 0.5f : 30f;
+            float clearance = kind == SlotKind.Anchor ? ScenePlacementSolver.AnchorClearance : ScenePlacementSolver.NpcClearance;
+            string id = bindId ?? "";
+
+            Vector2 flat;
+            bool resolved = false;
+
+            PlacedAsset placed = null;
+            if (unitByBindId != null && !string.IsNullOrEmpty(id)) unitByBindId.TryGetValue(id, out placed);
+            if (placed != null)
+            {
+                flat = new Vector2(placed.position.x, placed.position.z);
+                resolved = true;
+            }
+            else if (instance != null && instance.actorPositions.TryGetValue(id, out Vector3 cached))
+            {
+                flat = new Vector2(cached.x, cached.z);
+                resolved = true;
+            }
+            else if (storyLocalPosition != Vector3.zero)
+            {
+                flat = new Vector2(storyLocalPosition.x, storyLocalPosition.z);
+                resolved = true;
+            }
+            else
+            {
+                flat = Vector2.zero;
+            }
+
+            if (!resolved)
+            {
+                Vector2 slotPosition;
+                if (TryFindPlanUnitPosition(plan, id, kind, out slotPosition))
+                {
+                    flat = slotPosition;
+                    resolved = true;
+                }
+            }
+
+            if (!resolved)
+            {
+                // 兜底：锚点放在场景内圈、NPC 放在出生点附近，再交给净空搜索。
+                if (kind == SlotKind.Anchor)
+                    flat = new Vector2(halfW * 0.55f, halfL * 0.55f);
+                else if (instance != null)
+                    flat = new Vector2(instance.spawnPoint.x + 2f, instance.spawnPoint.z + 2f);
+                else
+                    flat = Vector2.zero;
+            }
+
+            if (instance != null)
+            {
+                if (!ScenePlacementSolver.IsPointFree(flat, clearance, instance.obstacles, halfW, halfL))
+                {
+                    Vector2 free;
+                    if (ScenePlacementSolver.TryFindFreePoint(flat, clearance, instance.obstacles, halfW, halfL, out free))
+                    {
+                        Debug.Log("[装配] " + (kind == SlotKind.Anchor ? "锚点 " : "NPC ") + id + " 原落点在模型/墙体内，已挪到空地。");
+                        flat = free;
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[装配] " + (kind == SlotKind.Anchor ? "锚点 " : "NPC ") + id + " 找不到模型外的空地。");
+                    }
+                }
+            }
+
+            float y = kind == SlotKind.Anchor ? 0.05f : 0f;
+            Vector3 position = new Vector3(flat.x, y, flat.y);
+            if (instance != null && !string.IsNullOrEmpty(id)) instance.actorPositions[id] = position;
+            if (placed != null) placed.position = position;
+            return position;
+        }
+
+        private static bool TryFindPlanUnitPosition(GrayboxPlan plan, string bindId, SlotKind kind, out Vector2 position)
+        {
+            position = Vector2.zero;
+            if (plan == null || plan.slots == null || string.IsNullOrEmpty(bindId)) return false;
+            for (int i = 0; i < plan.slots.Count; i++)
+            {
+                GrayboxSlot slot = plan.slots[i];
+                if (slot == null || slot.kind != kind) continue;
+                if (!string.Equals(slot.bindId, bindId, StringComparison.Ordinal)) continue;
+                position = slot.position;
+                return true;
+            }
+            return false;
         }
 
         private static Material CreateNpcMaterial(NpcSpec npc)
@@ -674,8 +1057,11 @@ namespace EpicSpark.Loading
                 instance.npcObjects.Clear();
             }
 
-            CreateAnchors(spec, plan, instance);
-            CreateNpcs(spec, plan, instance);
+            // 复用场景没有 BuildResult：位置从 actorPositions 缓存 + 灰盒槽位解析，
+            // 仍然会按已保存的「模型 + 墙体」障碍做净空检查，保证新 NPC / 锚点不落进模型。
+            var emptyBindings = new Dictionary<string, PlacedAsset>(StringComparer.Ordinal);
+            CreateAnchors(spec, plan, instance, emptyBindings);
+            CreateNpcs(spec, plan, instance, emptyBindings);
         }
     }
 }

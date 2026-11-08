@@ -1,4 +1,4 @@
-﻿// 场景质量审计：不进入 Play，直接把 剧情 → 灰盒 → 搭建 三段产物 dump 到 Logs/scene-audit.json。
+// 场景质量审计：不进入 Play，直接把 剧情 → 灰盒 → 搭建 三段产物 dump 到 Logs/scene-audit.json。
 // 用法（Unity 关闭时）：
 //   Unity.exe -batchmode -projectPath <proj> -executeMethod EpicSpark.EditorTools.EpicSparkSceneAudit.Run -logFile Logs\scene-audit.log
 // 目的：定位"场景像乱拼"到底坏在哪一段（文本描述没结构 / 灰盒没规划 / 搭建选错资产 / 装配丢了骨架）。
@@ -332,6 +332,7 @@ namespace EpicSpark.EditorTools
             }
 
             // 可视化验证：装配 + 调试截图（-render 时执行），用来确认"地编"和调试录制是否真的产出图像
+            SceneInstance auditedInstance = null;
             if (HasArg("-render"))
             {
                 try
@@ -343,6 +344,7 @@ namespace EpicSpark.EditorTools
                     var root = new GameObject("AuditSceneRoot");
                     SceneInstance instance = await SceneAssembler.AssembleAsync(
                         scene, plan, result, root.transform, CancellationToken.None);
+                    auditedInstance = instance;
 
                     // 补光：批处理下没有场景灯，否则截图全黑
                     var lightGo = new GameObject("AuditLight");
@@ -429,20 +431,30 @@ namespace EpicSpark.EditorTools
                 .Append(", \"max\": ").Append(F(maxSize))
                 .Append(", \"avg\": ").Append(F(scaled > 0 ? sumSize / scaled : 0f)).Append("},\n");
 
-            // 重叠检测（用 sizeX/sizeY 当作包围盒的一半半径，粗算）
-            int overlaps = 0;
-            for (int i = 0; i < placed.Count; i++)
-                for (int j = i + 1; j < placed.Count; j++)
-                {
-                    PlacedAsset a = placed[i], b = placed[j];
-                    if (a == null || b == null) continue;
-                    if (a.kind == SlotKind.Npc || a.kind == SlotKind.Anchor) continue;
-                    if (b.kind == SlotKind.Npc || b.kind == SlotKind.Anchor) continue;
-                    float dx = Mathf.Abs(a.position.x - b.position.x);
-                    float dz = Mathf.Abs(a.position.z - b.position.z);
-                    if (dx < (a.sizeX + b.sizeX) * 0.5f && dz < (a.sizeY + b.sizeY) * 0.5f) overlaps++;
-                }
+            // 空间约束指标：不允许穿模 / NPC 与锚点不落模型内 / 每个模型都有空气墙。
+            // overlapPairs 用与求解器一致的平面 OBB（SAT）判定；-render 时再统计装配后的真实包围盒与空气墙数量。
+            int overlaps = ScenePlacementSolver.CountModelOverlaps(placed, ScenePlacementSolver.ModelGap);
+            int npcInside = 0, anchorInside = 0;
+            int unitViolations = ScenePlacementSolver.CountUnitModelViolations(placed, plan, out npcInside, out anchorInside);
+            int exactModelOverlaps = 0;
+            int modelWallOverlaps = 0;
+            int airWalls = 0;
+            if (auditedInstance != null)
+            {
+                exactModelOverlaps = ScenePlacementSolver.CountFootprintOverlaps(
+                    auditedInstance.modelFootprints, null, ScenePlacementSolver.ModelGap);
+                modelWallOverlaps = ScenePlacementSolver.CountFootprintOverlaps(
+                    auditedInstance.modelFootprints, auditedInstance.wallFootprints, ScenePlacementSolver.ModelGap);
+                airWalls = auditedInstance.airWallCount;
+            }
             Report.Append("    \"overlapPairs\": ").Append(overlaps).Append(",\n");
+            Report.Append("    \"exactModelOverlaps\": ").Append(exactModelOverlaps).Append(",\n");
+            Report.Append("    \"modelWallOverlaps\": ").Append(modelWallOverlaps).Append(",\n");
+            Report.Append("    \"actorInsideModel\": ").Append(unitViolations).Append(",\n");
+            Report.Append("    \"npcInsideModel\": ").Append(npcInside).Append(",\n");
+            Report.Append("    \"anchorInsideModel\": ").Append(anchorInside).Append(",\n");
+            Report.Append("    \"airWalls\": ").Append(airWalls).Append(",\n");
+            Report.Append("    \"modelsRendered\": ").Append(auditedInstance != null ? auditedInstance.models.Count : 0).Append(",\n");
             Report.Append("    \"grid5x5\": [");
             for (int gz = 0; gz < 5; gz++)
             {
@@ -480,7 +492,8 @@ namespace EpicSpark.EditorTools
             Report.Append("  }\n}\n");
 
             Debug.Log("[审计] 完成 剧情=" + storyMs + "ms 灰盒=" + grayboxMs + "ms 搭建=" + buildMs + "ms 落位=" + placed.Count
-                      + " 重叠=" + overlaps + " 模型种类=" + byModel.Count);
+                      + " 重叠=" + overlaps + " NPC入模=" + npcInside + " 锚点入模=" + anchorInside
+                      + " 空气墙=" + airWalls + " 模型种类=" + byModel.Count);
         }
 
         private static void SceneAuditBegin(LlmService llm, ApiConfig cfg)

@@ -1,0 +1,21 @@
+{
+  "apiKey": "sk-68cfa4b5b780405ea4f6cef4da1bb26e",
+
+  "asrUrl": "wss://dashscope.aliyuncs.com/api-ws/v1/inference",
+  "asrModel": "paraformer-realtime-v2",
+  "asrSampleRate": 16000,
+
+  "ttsUrl": "wss://dashscope.aliyuncs.com/api-ws/v1/realtime",
+  "ttsModel": "qwen3-tts-flash-realtime",
+  "ttsVoice": "Cherry",
+  "ttsSampleRate": 24000,
+  "enableTts": true,
+  "ttsVolume": 1.0,
+
+  "pushToTalk": true,
+  "vadThreshold": 0.012,
+  "silenceSeconds": 1.1,
+  "maxUtteranceSeconds": 25,
+  "micDevice": "",
+  "sanitizeSpeech": true
+}

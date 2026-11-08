@@ -1,4 +1,4 @@
-﻿// 启动与装配：把四层 Agent、知识库、模型库、玩家、HUD、锚点路由器全部接起来。
+// 启动与装配：把四层 Agent、知识库、模型库、玩家、HUD、锚点路由器全部接起来。
 // 无 API Key 时一切走确定性兜底，游戏仍可完整游玩（离线模式）。
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,7 @@ using EpicSpark.Tools;
 using EpicSpark.Anchors;
 using EpicSpark.UI;
 using EpicSpark.Loading;
+using EpicSpark.Voice;
 
 namespace EpicSpark.Bootstrap
 {
@@ -54,6 +55,7 @@ namespace EpicSpark.Bootstrap
         private ModelCatalog _catalog;
         private TitleScreen _title;
         private HudController _hud;
+        private VoiceDialogueController _voice;
         private AnchorRouter _router;
         private ToleranceSliderUi _toleranceUi;
         private ApiSettingsScreen _settingsScreen;
@@ -274,6 +276,11 @@ namespace EpicSpark.Bootstrap
             _hud = hudGo.AddComponent<HudController>();
             _hud.showCrosshair = true;
 
+            // 语音对话：ASR + TTS + 麦克风 + 打字输入兜底。挂在引导对象下，随游戏常驻。
+            var voiceGo = new GameObject("VoiceDialogue");
+            voiceGo.transform.SetParent(transform, false);
+            _voice = voiceGo.AddComponent<VoiceDialogueController>();
+
             // 传送锚点路由器
             var routerGo = new GameObject("AnchorRouter");
             _router = routerGo.AddComponent<AnchorRouter>();
@@ -347,7 +354,7 @@ namespace EpicSpark.Bootstrap
                 return;
             }
 
-            EnterPlayUi("WASD 移动 · E 互动/传送 · 左键攻击 · F 对话 · Tab 调整容忍度");
+            EnterPlayUi("WASD 移动 · E 互动/传送 · 左键攻击 · F 对话（对话中按住 V 说话 / T 打字）· Tab 调整容忍度");
         }
 
         private async void OnResumeRequested()
@@ -411,14 +418,14 @@ namespace EpicSpark.Bootstrap
             catch (Exception e) { Debug.LogError("[启动] 锚点推进异常: " + e); }
         }
 
-        private async Task<string> OnNpcReplyAsync(NpcSpec npc, string playerLine)
+        private async Task<string> OnNpcReplyAsync(NpcSpec npc, string playerLine, IReadOnlyList<string> history)
         {
             if (_dialogue == null) return null;
             try
             {
                 string context = BuildStoryContext();
-                var history = new List<string>();
-                return await _dialogue.ReplyAsync(npc, playerLine, context, history, _cts.Token);
+                var recent = history ?? new List<string>();
+                return await _dialogue.ReplyAsync(npc, playerLine, context, recent, _cts.Token);
             }
             catch (Exception e)
             {
@@ -710,6 +717,11 @@ namespace EpicSpark.Bootstrap
             ToolInventory.ToolEquipped -= OnToolEquipped;
             ToleranceSliderUi.ValueChanged -= OnToleranceChanged;
             if (_director != null) _director.Shutdown();
+            if (_voice != null)
+            {
+                Destroy(_voice.gameObject);
+                _voice = null;
+            }
             try { _cts.Cancel(); } catch (Exception) { }
             if (_knowledge != null) _knowledge.Dispose();
             if (Instance == this) Instance = null;
