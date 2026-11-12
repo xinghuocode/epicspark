@@ -1,5 +1,5 @@
-﻿// 场景装配：把「剧情 SceneSpec + 灰盒 GrayboxPlan + 搭建 BuildResult」变成可游玩的世界。
-// 这里是四层 Agent 流水线的落地端——所有资产都通过自研 GLB 加载器进入引擎。
+// 场景装配：把「剧情 SceneSpec + 权威灰盒 GrayboxPlan + 素模 BuildResult」变成可游玩的世界。
+// 当前只由 PrimitiveKit 创建几何体；历史 GLB 代码被 EPICSPARK_ENABLE_LEGACY_ASSETS 编译开关隔离。
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -26,6 +26,8 @@ namespace EpicSpark.Loading
         public Vector3 spawnPoint = new Vector3(0f, 1.2f, 0f);
         public float width = 60f;
         public float length = 60f;
+        /// <summary>生成该实例的权威灰盒状态；复用时按同一计划恢复锚点/NPC，禁止退回固定角落。</summary>
+        public GrayboxPlan plan;
     }
 
     /// <summary>单个已放置模型的运行时视图。</summary>
@@ -112,6 +114,7 @@ namespace EpicSpark.Loading
                 sceneId = spec != null ? spec.sceneId : "",
                 width = plan != null && plan.width > 1f ? plan.width : (spec != null ? spec.width : 60f),
                 length = plan != null && plan.length > 1f ? plan.length : (spec != null ? spec.length : 60f),
+                plan = plan,
             };
 
             instance.root = new GameObject("Scene_" + (string.IsNullOrEmpty(instance.sceneId) ? "unnamed" : instance.sceneId));
@@ -141,10 +144,91 @@ namespace EpicSpark.Loading
                 }
             }
 
+            EnsureSpecStructures(plan, build, instance);
             CreateAnchors(spec, plan, instance);
             CreateNpcs(spec, plan, instance);
 
             return instance;
+        }
+
+        /// <summary>
+        /// 集市遮阳棚这类「有明确 10×22 占地、但美术库里没有合适模型」的规格槽位，
+        /// 不能因为回退到 1.5 米木箱就从画面里消失。这里补一套灰盒棚架，
+        /// 保证剧情布局里的结构至少可见；以后有真实资产且尺寸匹配时不重复生成。
+        /// </summary>
+        private static void EnsureSpecStructures(GrayboxPlan plan, BuildResult build, SceneInstance instance)
+        {
+            if (plan == null || plan.slots == null || instance == null) return;
+            // 素模模式：每个槽位（含摊位/棚架）都会由 PrimitiveKit 生成几何体，不需要再补灰盒棚架。
+            if (build != null && build.primitiveMode) return;
+            for (int i = 0; i < plan.slots.Count; i++)
+            {
+                GrayboxSlot slot = plan.slots[i];
+                if (slot == null || !slot.specRequired) continue;
+                if (slot.kind != SlotKind.Prop && slot.kind != SlotKind.Decoration) continue;
+                string semantic = slot.semantic ?? "";
+                bool canopy = semantic.IndexOf("遮阳棚", StringComparison.Ordinal) >= 0
+                              || semantic.IndexOf("木棚", StringComparison.Ordinal) >= 0
+                              || (semantic.IndexOf("集市", StringComparison.Ordinal) >= 0
+                                  && semantic.IndexOf("棚", StringComparison.Ordinal) >= 0);
+                if (!canopy) continue;
+                if (slot.sizeX < 5f && slot.sizeY < 5f) continue;
+
+                bool alreadyCovered = false;
+                if (build != null && build.placed != null)
+                {
+                    for (int p = 0; p < build.placed.Count; p++)
+                    {
+                        PlacedAsset placed = build.placed[p];
+                        if (placed == null || placed.slotId != slot.slotId) continue;
+                        if (placed.sizeX >= slot.sizeX * 0.55f && placed.sizeY >= slot.sizeY * 0.55f)
+                            alreadyCovered = true;
+                    }
+                }
+                if (!alreadyCovered) CreateCanopy(slot, instance);
+            }
+        }
+
+        private static void CreateCanopy(GrayboxSlot slot, SceneInstance instance)
+        {
+            float width = Mathf.Max(3f, slot.sizeX);
+            float depth = Mathf.Max(3f, slot.sizeY);
+            float height = 2.8f;
+            Vector3 center = GrayboxRenderer.ToWorld(slot.position, 0f);
+
+            var root = new GameObject("SpecCanopy_" + slot.slotId);
+            root.transform.SetParent(instance.modelRoot.transform, false);
+            root.transform.position = new Vector3(center.x, 0f, center.z);
+            root.transform.rotation = Quaternion.Euler(0f, slot.rotation, 0f);
+
+            Material roofMat = CreateLitMaterial("CanopyRoof", new Color(0.52f, 0.34f, 0.20f, 1f), 0.02f);
+            Material postMat = CreateLitMaterial("CanopyPost", new Color(0.24f, 0.16f, 0.10f, 1f), 0.02f);
+
+            var roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            roof.name = "CanopyRoof";
+            roof.transform.SetParent(root.transform, false);
+            roof.transform.localScale = new Vector3(width, 0.18f, depth);
+            roof.transform.localPosition = new Vector3(0f, height, 0f);
+            var roofRenderer = roof.GetComponent<MeshRenderer>();
+            if (roofRenderer != null) roofRenderer.sharedMaterial = roofMat;
+
+            float px = Mathf.Max(0.6f, width * 0.42f);
+            float pz = Mathf.Max(0.6f, depth * 0.42f);
+            float[][] corners =
+            {
+                new[] { -px, -pz }, new[] { px, -pz },
+                new[] { -px, pz }, new[] { px, pz },
+            };
+            for (int i = 0; i < corners.Length; i++)
+            {
+                var post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                post.name = "CanopyPost_" + i;
+                post.transform.SetParent(root.transform, false);
+                post.transform.localScale = new Vector3(0.16f, height, 0.16f);
+                post.transform.localPosition = new Vector3(corners[i][0], height * 0.5f, corners[i][1]);
+                var postRenderer = post.GetComponent<MeshRenderer>();
+                if (postRenderer != null) postRenderer.sharedMaterial = postMat;
+            }
         }
 
         // ─────────────────────────── 地形与区域 ───────────────────────────
@@ -354,8 +438,38 @@ namespace EpicSpark.Loading
 
         // ─────────────────────────── 模型 ───────────────────────────
 
+        /// <summary>流式加载：把某一段的搭建结果追加进已在运行的场景，并立即点亮。</summary>
+        public static async Task<List<ModelView>> AppendModelsAsync(
+            SceneInstance instance, BuildResult build, CancellationToken ct)
+        {
+            var added = new List<ModelView>();
+            if (instance == null || build == null || build.placed == null) return added;
+
+            for (int i = 0; i < build.placed.Count; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                PlacedAsset placed = build.placed[i];
+                if (placed == null) continue;
+                ModelView view = await CreateModelAsync(placed, instance, ct);
+                if (view == null) continue;
+                if (view.renderer != null && view.model != null && view.model.material != null)
+                    view.renderer.sharedMaterial = view.model.material;
+                view.revealed = true;
+                instance.models.Add(view);
+                added.Add(view);
+            }
+            return added;
+        }
+
         private static async Task<ModelView> CreateModelAsync(PlacedAsset placed, SceneInstance instance, CancellationToken ct)
         {
+            // 当前阶段所有场景对象都只能由 PrimitiveKit 构建。
+            // 即使旧存档/远端数据没有 primitive，也补一个安全形态，绝不触碰模型库或 GLB。
+            if (string.IsNullOrEmpty(placed.primitive))
+                placed.primitive = placed.kind == SlotKind.Building ? "row_house" : "prop";
+            return await Task.FromResult(CreatePrimitiveModel(placed, instance));
+
+#if EPICSPARK_ENABLE_LEGACY_ASSETS
             string fileName = await ResolveGlbPathAsync(placed.modelId, ct);
             if (string.IsNullOrEmpty(fileName)) return null;
 
@@ -381,8 +495,22 @@ namespace EpicSpark.Loading
             // 这里取两轴缩放均值，保持资产原本比例。
             float scaleX = Mathf.Max(0.05f, placed.sizeX) / baseWidth;
             float scaleZ = Mathf.Max(0.05f, placed.sizeY) / baseDepth;
-            float scaleY = Mathf.Clamp((scaleX + scaleZ) * 0.5f, 0.02f, 400f);
-            go.transform.localScale = new Vector3(scaleY, scaleY, scaleY);
+            float scaleY;
+            Vector3 scale;
+            if (placed.height > 0.5f && bounds.size.y > 0.05f)
+            {
+                // 剧情给了高度（"高 12 米"）：横向按占地、纵向按高度分别缩放。
+                // 以前一律等比缩放，30×35 的教堂和 8×8 的城门都被拉成同一比例，"高度"写了也没用。
+                float baseHeight = Mathf.Max(0.0001f, bounds.size.y);
+                scaleY = Mathf.Clamp(placed.height / baseHeight, 0.02f, 400f);
+                scale = new Vector3(scaleX, scaleY, scaleZ);
+            }
+            else
+            {
+                scaleY = Mathf.Clamp((scaleX + scaleZ) * 0.5f, 0.02f, 400f);
+                scale = new Vector3(scaleY, scaleY, scaleY);
+            }
+            go.transform.localScale = scale;
 
             Vector3 worldPos = GrayboxRenderer.ToWorld(new Vector2(placed.position.x, placed.position.z), 0f);
             float bottomOffset = -bounds.min.y * scaleY;
@@ -401,6 +529,26 @@ namespace EpicSpark.Loading
                 flatMaterial = FlatMaterial,
                 distance = Vector3.Distance(instance.spawnPoint, go.transform.position),
             };
+#endif
+        }
+
+        /// <summary>素模装配：按 primitive 生成程序化几何体（长方体/圆柱/圆锥/楔形/台阶/摊位…）。</summary>
+        private static ModelView CreatePrimitiveModel(PlacedAsset placed, SceneInstance instance)
+        {
+            GameObject go = EpicSpark.SceneGen.PrimitiveKit.Build(placed, instance.modelRoot.transform);
+            if (go == null) return null;
+            var renderer = go.GetComponentInChildren<MeshRenderer>();
+            return new ModelView
+            {
+                slotId = placed.slotId,
+                modelId = placed.modelId,
+                gameObject = go,
+                renderer = renderer,
+                model = null,
+                flatMaterial = renderer != null ? renderer.sharedMaterial : null,
+                distance = Vector3.Distance(instance.spawnPoint, go.transform.position),
+                revealed = true,
+            };
         }
 
         private static ModelView CreateFallbackBox(PlacedAsset placed, SceneInstance instance)
@@ -408,8 +556,9 @@ namespace EpicSpark.Loading
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = "fallback_" + placed.modelId;
             go.transform.SetParent(instance.modelRoot.transform, false);
-            go.transform.localScale = new Vector3(placed.sizeX, Mathf.Max(1f, placed.sizeY * 0.5f), placed.sizeY);
-            go.transform.position = new Vector3(placed.position.x, go.transform.localScale.y * 0.5f, placed.position.z);
+            float height = placed.height > 0.5f ? placed.height : Mathf.Max(1f, placed.sizeY * 0.5f);
+            go.transform.localScale = new Vector3(placed.sizeX, height, placed.sizeY);
+            go.transform.position = new Vector3(placed.position.x, height * 0.5f, placed.position.z);
             go.transform.rotation = Quaternion.Euler(0f, placed.rotationY, 0f);
             var renderer = go.GetComponent<MeshRenderer>();
             if (renderer != null) renderer.sharedMaterial = FlatMaterial;
@@ -474,8 +623,20 @@ namespace EpicSpark.Loading
 
         private static Vector3 ResolveAnchorPosition(SceneAnchorSpec anchor, GrayboxPlan plan, SceneInstance instance)
         {
-            float halfW = instance.width * 0.42f;
-            float halfL = instance.length * 0.42f;
+            float halfW = Mathf.Max(1f, instance.width * 0.5f - 0.5f);
+            float halfL = Mathf.Max(1f, instance.length * 0.5f - 0.5f);
+            // 规格模式下灰盒的 anchor 槽位就是剧情坐标；优先用它，避免 localPosition 扇形兜底覆盖。
+            if (EpicSparkFeatureFlags.PreferPlanUnitPositions && plan != null && plan.slots != null)
+            {
+                for (int i = 0; i < plan.slots.Count; i++)
+                {
+                    GrayboxSlot slot = plan.slots[i];
+                    if (slot == null || slot.kind != SlotKind.Anchor) continue;
+                    if (slot.bindId != anchor.anchorId) continue;
+                    // 工具灰盒已完成边界与入口校验；装配层必须原样使用，禁止二次夹取导致脱离载体。
+                    return new Vector3(slot.position.x, 0.05f, slot.position.y);
+                }
+            }
             if (anchor.localPosition != Vector3.zero)
             {
                 return new Vector3(
@@ -494,7 +655,18 @@ namespace EpicSpark.Loading
                 if (npc == null) continue;
                 var go = new GameObject("NPC_" + npc.npcId);
                 go.transform.SetParent(instance.root.transform, false);
-                go.transform.position = new Vector3(npc.localPosition.x, 0f, npc.localPosition.z);
+                Vector3 npcPosition = new Vector3(npc.localPosition.x, 0f, npc.localPosition.z);
+                if (EpicSparkFeatureFlags.PreferPlanUnitPositions && plan != null && plan.slots != null)
+                {
+                    for (int s = 0; s < plan.slots.Count; s++)
+                    {
+                        GrayboxSlot slot = plan.slots[s];
+                        if (slot == null || slot.kind != SlotKind.Npc || slot.bindId != npc.npcId) continue;
+                        npcPosition = new Vector3(slot.position.x, 0f, slot.position.y);
+                        break;
+                    }
+                }
+                go.transform.position = npcPosition;
 
                 // 占位身体：没有人物美术资产，用胶囊体保证 NPC 可见、可聚焦
                 var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);

@@ -26,6 +26,8 @@ namespace EpicSpark.Story
         RevolutionEurope = 3,
         ModernEurope = 4,
         ModernChina = 5,
+        /// <summary>没有可靠时代/地域依据时的诚实兜底，不冒充特定文明。</summary>
+        Unknown = 6,
     }
 
     /// <summary>场景模板族：城镇广场 / 乡村 / 港口 / 宫廷 / 战场 / 教堂区 / 集市。</summary>
@@ -277,6 +279,7 @@ namespace EpicSpark.Story
             string name = eventName ?? "";
             string context = knowledgeContext ?? "";
             if (context.Length > 4000) context = context.Substring(0, 4000);
+            bool weakKnowledge = context.IndexOf("知识库未收录该事件", StringComparison.Ordinal) >= 0;
 
             int[] nameScores =
             {
@@ -302,9 +305,9 @@ namespace EpicSpark.Story
                 }
             }
 
-            if (concept < 0)
+            if (concept < 0 && !weakKnowledge)
             {
-                // 事件名没有线索：用上下文补足（上限 6 分，避免史料长文淹没短事件名）
+                // 事件名没有线索：只有可靠上下文才能补足；“未收录”的泛化相近战役不能拿来定型。
                 int bestContext = 0;
                 for (int i = 0; i < conceptKeywords.Length; i++)
                 {
@@ -317,8 +320,8 @@ namespace EpicSpark.Story
                 }
                 if (concept < 0)
                 {
-                    // 完全没有线索：大革命是设计文档的主例，兜底使用它
-                    return StoryEra.RevolutionEurope;
+                    // 完全没有可靠线索：明确未知，不再默认法国大革命或某个地域。
+                    return StoryEra.Unknown;
                 }
             }
 
@@ -343,6 +346,12 @@ namespace EpicSpark.Story
                 int europe = nameEurope * 3 + Math.Min(Score(context, EuropeKeywords), 6);
                 isChina = china > europe;
                 isEurope = europe > china;
+            }
+
+            if (!isChina && !isEurope)
+            {
+                // 两河流域、蒙古、美洲等未被粗分类覆盖的地域必须保持未知，不能默认成中国。
+                return StoryEra.Unknown;
             }
 
             switch (concept)
@@ -580,6 +589,40 @@ namespace EpicSpark.Story
                 placeNames = new[] { "上海", "广州", "天津", "汉口", "南京", "苏州" },
                 styleHint = "late qing dynasty chinese city, brick lane, wood lattice window, western arcade, changshan",
                 endingTone = "旧朝崩塌的声音里，你只听见自己的脚步",
+            });
+
+            list.Add(new EraProfile
+            {
+                era = StoryEra.Unknown,
+                eraName = "离线未验证背景",
+                eraBrief = "未验证",
+                regionName = "未确认地点",
+                styleTag = "通用简单几何环境，不代表任何特定历史建筑或文明",
+                ground = "平整土地与自然踩踏路面",
+                houseStyle = "无特定时代样式",
+                authority = "临时议事点",
+                crowd = "身份未确认的当地人",
+                soldier = "身份未确认的守卫",
+                messenger = "当地向导",
+                priest = "当地仪式主持者",
+                merchant = "流动交换者",
+                noble = "当地负责人",
+                commoner = "当地居民",
+                artisan = "当地工匠",
+                transport = "简易运载工具",
+                church = "当地集会处",
+                townhall = "公共议事处",
+                gate = "场地出口",
+                market = "临时交换点",
+                street = "土路",
+                notice = "无文字方向标",
+                landmark = "通用方向标",
+                weaponName = "简易工具",
+                warName = "未知冲突",
+                npcNames = new[] { "当地向导", "当地居民", "场地守卫", "当地工匠" },
+                placeNames = new string[0],
+                styleHint = "generic primitive environment, explicitly no historical claim",
+                endingTone = "这段经历尚未形成可验证的历史结论",
             });
 
             return list.ToArray();

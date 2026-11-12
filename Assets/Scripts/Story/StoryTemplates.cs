@@ -30,15 +30,22 @@ namespace EpicSpark.Story
               .Append("，离地 1.2 米，面朝正北（+Z）。\n");
             sb.Append("【风格】").Append(p.styleTag).Append("。\n");
 
-            switch (template)
+            if (p.era == StoryEra.Unknown)
             {
-                case StoryTemplate.Square: AppendSquare(sb, p, scene); break;
+                AppendUnknown(sb, p, scene);
+            }
+            else
+            {
+                switch (template)
+                {
+                    case StoryTemplate.Square: AppendSquare(sb, p, scene); break;
                 case StoryTemplate.Country: AppendCountry(sb, p, scene); break;
                 case StoryTemplate.Harbor: AppendHarbor(sb, p, scene); break;
                 case StoryTemplate.Court: AppendCourt(sb, p, scene); break;
                 case StoryTemplate.Battlefield: AppendBattlefield(sb, p, scene); break;
                 case StoryTemplate.Church: AppendChurch(sb, p, scene); break;
-                case StoryTemplate.Market: AppendMarket(sb, p, scene); break;
+                    case StoryTemplate.Market: AppendMarket(sb, p, scene); break;
+                }
             }
 
             sb.Append("【本幕焦点】").Append(StageNote(template, p, stage)).Append('\n');
@@ -49,6 +56,15 @@ namespace EpicSpark.Story
         }
 
         // ─────────────────────────── 七个模板 ───────────────────────────
+
+        private static void AppendUnknown(StringBuilder sb, EraProfile p, SceneSpec scene)
+        {
+            sb.Append("【性质】这是离线未验证的通用几何场地，不代表 ").Append(p.regionName)
+              .Append(" 或任何具体历史文明。\n");
+            sb.Append("【地形】平整自然地面，中央 (0,0) 设置通用方向标；一条简易土路由 (0,-24) 通向 (0,24)，")
+              .Append("不得因为模板习惯擅自添加县衙、教堂、城市住宅或其他特定时代建筑。\n");
+            sb.Append("【内容】只保留剧情单位、通用道具与可通行的开放空间；具体历史内容需要由可用模型或可靠资料补充。\n");
+        }
 
         private static void AppendSquare(StringBuilder sb, EraProfile p, SceneSpec scene)
         {

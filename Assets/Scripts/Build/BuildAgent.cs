@@ -1,4 +1,5 @@
-﻿// 搭建 Agent：把灰盒语义槽逐个绑定成美术资产。
+// 搭建 Agent：当前正式路径只把已验收灰盒转换为 PrimitiveKit 简单几何体。
+// 下方模型检索/资产生成代码为历史实现，强制素模阶段不会执行。
 // 规则（设计文档「滑块」）：
 //   sliderValue = 1 → 容忍度 0（最严格）→ 复用门槛相似度 1.0 → 正常永远不满足 → 总是现生成；
 //   sliderValue = 0 → 容忍度 1（最宽松）→ 门槛 0 → 任何现有资产都接受。
@@ -19,6 +20,8 @@ namespace EpicSpark.Build
     {
         private const int MaxWarnings = 64;
 
+        /// <summary>本场景各资产已出现次数：同一栋房子重复 3 次会显得场景很"简单"。</summary>
+        private readonly Dictionary<string, int> UsedModels = new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly IModelCatalog catalogOverride;
         private ModelCatalog ownedCatalog;
 
@@ -50,6 +53,19 @@ namespace EpicSpark.Build
                 return result;
             }
 
+            // ── 素模阶段：完全不用美术资产库 ──
+            // 只把槽位翻译成程序化几何体（长方体/圆柱/圆锥/楔形），先验证"密度/秩序/落位"。
+            // 这一步以前要经过模型库检索 + 资产生成 + 容忍度判断，结果是缺资产就整块消失
+            // （实测 30 个槽位只落了 12 个，城堡/城门/教堂/菜市全缺）。
+            if (EpicSparkFeatureFlags.UsePrimitiveScene)
+            {
+                // 当前阶段为强制素模：即使结果为空也返回明确错误，禁止回退 GLB 检索/资产生成。
+                BuildResult primitive = EpicSpark.SceneGen.SceneGenPipeline.PlaceAll(scene, plan);
+                Debug.Log("[搭建/素模] 场景 " + result.sceneId + " 构件 " + primitive.placed.Count
+                          + " 个（美术资产库与资产生成已禁用）");
+                return primitive;
+            }
+
             float slider = SliderConfig.Clamp01(request.sliderValue);
             float required = SliderConfig.RequiredSimilarity(slider);
             Debug.Log("[搭建] " + SliderConfig.Describe(slider) + " | 语义槽 " + plan.slots.Count + " 个 | 场景 "
@@ -78,7 +94,24 @@ namespace EpicSpark.Build
                 try
                 {
                     PlacedAsset placed = await BuildSlotAsync(slot, i, plan, catalog, slider, required, result, ct);
-                    if (placed != null) result.placed.Add(placed);
+                    if (placed != null)
+                {
+                    result.placed.Add(placed);
+                    if (!string.IsNullOrEmpty(placed.modelId))
+                    {
+                        int used;
+                        UsedModels.TryGetValue(placed.modelId, out used);
+                        UsedModels[placed.modelId] = used + 1;
+                    }
+                    if (slot.specRequired && slot.kind != SlotKind.Npc && slot.kind != SlotKind.Anchor)
+                    {
+                        if (string.IsNullOrEmpty(placed.modelId))
+                            AddWarning(result, "剧情规格槽位 " + slot.slotId + " 没有可用模型，已落占位。");
+                        else if (placed.matchScore > 0f && placed.matchScore < 0.5f)
+                            AddWarning(result, "剧情规格槽位 " + slot.slotId + " 资产相似度偏低（"
+                                               + placed.matchScore.ToString("0.00") + "），可能不像剧情描述。");
+                    }
+                }
                 }
                 catch (OperationCanceledException)
                 {
@@ -127,6 +160,19 @@ namespace EpicSpark.Build
             try
             {
                 match = await catalog.FindBestAsync(query, PreferredCategories(slot.kind), ct);
+                // 同一场景内已经用过两次的资产会视觉雷同，优先换一个：换不到就交给生成器
+                if (match.HasEntry && UsedModels.Count >= 2)
+                {
+                    string dupId = match.entry.id;
+                    if (UsedModels.TryGetValue(dupId, out int usedCount) && usedCount >= 2)
+                    {
+                        ModelMatch alternative = await catalog.FindBestAsync(
+                            query + "，" + slot.slotId, PreferredCategories(slot.kind), ct);
+                        if (alternative.HasEntry && alternative.entry.id != dupId) match = alternative;
+                        else AddWarning(result, "场景内 " + dupId + " 已用 " + usedCount
+                                            + " 次，同类候选不足，只能重复（建议开启资产生成或补充建筑类资产）。");
+                    }
+                }
             }
             catch (OperationCanceledException)
             {
@@ -217,16 +263,21 @@ namespace EpicSpark.Build
             if (float.IsNaN(slot.rotation) || float.IsInfinity(slot.rotation)) slot.rotation = 0f;
             slot.rotation = Mathf.DeltaAngle(0f, slot.rotation);
 
-            slot.sizeX = ClampSize(slot.sizeX);
-            slot.sizeY = ClampSize(slot.sizeY);
+            // 60 米上限是给 60×60 小场景兜底的；200×200 场景里 70 米长的集市棚、
+            // 长街排屋不能被削成 60 米，否则会凭空出现缺口。按场景尺寸放宽到 90%。
+            float maxSize = plan.specDriven
+                ? Mathf.Clamp(Mathf.Max(60f, Mathf.Max(plan.width, plan.length) * 0.9f), 60f, 180f)
+                : 40f;
+            slot.sizeX = ClampSize(slot.sizeX, maxSize);
+            slot.sizeY = ClampSize(slot.sizeY, maxSize);
             if (string.IsNullOrEmpty(slot.slotId))
                 slot.slotId = "slot_auto_" + slotIndex.ToString(CultureInfo.InvariantCulture);
         }
 
-        private static float ClampSize(float value)
+        private static float ClampSize(float value, float max)
         {
             if (float.IsNaN(value) || float.IsInfinity(value) || value <= 0f) return 2f;
-            return Mathf.Clamp(value, 0.2f, 40f);
+            return Mathf.Clamp(value, 0.2f, max);
         }
 
         // ─────────────────────────── 剧情单位兜底 ───────────────────────────
@@ -238,6 +289,9 @@ namespace EpicSpark.Build
         private static void EnsureStoryUnits(SceneSpec scene, GrayboxPlan plan, BuildResult result)
         {
             if (scene == null || plan == null) return;
+            // 规格模式下剧情单位已由 LayoutSpec 执行器/合规合并精确落槽；
+            // 再用 localPosition 扇形兜底会覆盖正确坐标，必须禁用。
+            if (plan.specDriven) return;
 
             var npcBound = new HashSet<string>(StringComparer.Ordinal);
             var anchorBound = new HashSet<string>(StringComparer.Ordinal);

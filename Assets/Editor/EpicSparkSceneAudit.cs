@@ -1,4 +1,4 @@
-﻿// 场景质量审计：不进入 Play，直接把 剧情 → 灰盒 → 搭建 三段产物 dump 到 Logs/scene-audit.json。
+// 场景质量审计：不进入 Play，直接把 剧情 → 灰盒 → 搭建 三段产物 dump 到 Logs/scene-audit.json。
 // 用法（Unity 关闭时）：
 //   Unity.exe -batchmode -projectPath <proj> -executeMethod EpicSpark.EditorTools.EpicSparkSceneAudit.Run -logFile Logs\scene-audit.log
 // 目的：定位"场景像乱拼"到底坏在哪一段（文本描述没结构 / 灰盒没规划 / 搭建选错资产 / 装配丢了骨架）。
@@ -80,6 +80,7 @@ namespace EpicSpark.EditorTools
 
             const string eventName = "法国大革命 攻占巴士底狱";
             bool offlineMode = HasArg("-offline");
+            bool remoteGraybox = HasArg("-remote-graybox");
             string specPath = System.IO.Path.Combine(
                 System.IO.Path.GetDirectoryName(Application.dataPath) ?? ".", "Logs", "scene-spec.json");
 
@@ -112,7 +113,7 @@ namespace EpicSpark.EditorTools
             StoryTurn turn = null;
             long storyMs = 0;
             var story = new StoryAgent(llm) { RemoteTimeoutSeconds = cfg.ResolvedTimeoutSeconds };
-            var graybox = new GrayboxAgent(llm) { RemoteTimeoutSeconds = 150, ToolRounds = 2 };
+            var graybox = new GrayboxAgent(llm) { RemoteTimeoutSeconds = 0, ToolRounds = 2 };
             var build = new BuildAgent();
 
             // -spec <路径>：直接载入指定场景 JSON（可从调试目录的 04_场景JSON.txt 复现某一轮）
@@ -128,8 +129,16 @@ namespace EpicSpark.EditorTools
             {
                 turn = new StoryTurn { narrative = "(离线：复用缓存场景)" };
                 turn.scenes.Add(cached);
-                graybox = new GrayboxAgent(null);
-                Services.Llm = null; // 离线：别让灰盒再打远端
+                if (remoteGraybox)
+                {
+                    graybox = new GrayboxAgent(llm) { RemoteTimeoutSeconds = 0, ToolRounds = 2 };
+                    Debug.Log("[审计] 离线场景 + 远端灰盒：专门验证灰盒是否按 LayoutSpec 施工。");
+                }
+                else
+                {
+                    graybox = new GrayboxAgent(null);
+                    Services.Llm = null; // 离线：别让灰盒再打远端
+                }
             }
             else
             {
@@ -198,12 +207,14 @@ namespace EpicSpark.EditorTools
                     pathKinds[k] = pathKinds.TryGetValue(k, out int c) ? c + 1 : 1;
                 }
             var slotKinds = new Dictionary<string, int>(StringComparer.Ordinal);
+            var segmentCounts = new Dictionary<int, int>();
             if (plan != null && plan.slots != null)
                 foreach (GrayboxSlot s in plan.slots)
                 {
                     if (s == null) continue;
                     string k = s.kind.ToString();
                     slotKinds[k] = slotKinds.TryGetValue(k, out int c) ? c + 1 : 1;
+                    segmentCounts[s.segment] = segmentCounts.TryGetValue(s.segment, out int sc) ? sc + 1 : 1;
                 }
 
             // 布局解析结果：确认"剧情写的坐标"是否被正确抽出来
@@ -275,6 +286,16 @@ namespace EpicSpark.EditorTools
                 }
                 Report.Append("},\n");
                 Report.Append("    \"slots\": ").Append(plan.slots != null ? plan.slots.Count : 0).Append(",\n");
+                Report.Append("    \"segmentCount\": ").Append(plan.segmentCount).Append(",\n");
+                Report.Append("    \"segmentSlots\": {");
+                first = true;
+                foreach (KeyValuePair<int, int> kv in segmentCounts)
+                {
+                    if (!first) Report.Append(", ");
+                    first = false;
+                    Report.Append(Quote(kv.Key.ToString(CultureInfo.InvariantCulture))).Append(": ").Append(kv.Value);
+                }
+                Report.Append("},\n");
                 Report.Append("    \"slotKinds\": {");
                 first = true;
                 foreach (KeyValuePair<string, int> kv in slotKinds)

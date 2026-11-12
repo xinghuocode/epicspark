@@ -134,7 +134,11 @@ namespace EpicSpark.Graybox
     ""sizeY"": { ""type"": ""number"", ""description"": ""占地纵深（米）"" },
     ""kind"": { ""type"": ""string"", ""enum"": [""building"", ""prop"", ""npc"", ""anchor"", ""decoration""], ""description"": ""槽位种类"" },
     ""bindId"": { ""type"": ""string"", ""description"": ""绑定 NpcSpec.npcId / SceneAnchorSpec.anchorId / PropInteraction.propId，可不填"" },
-    ""expectedModelHint"": { ""type"": ""string"", ""description"": ""期望模型关键词补充，例如此刻期望「路灯」"" }
+    ""expectedModelHint"": { ""type"": ""string"", ""description"": ""期望模型关键词补充，例如此刻期望「路灯」"" },
+    ""specItemId"": { ""type"": ""string"", ""description"": ""执行模式下必须等于 seed 槽位的 specItemId，新增槽位不填"" },
+    ""rowId"": { ""type"": ""string"", ""description"": ""连续街屋分组 id；执行模式下保留 seed 值"" },
+    ""rowIndex"": { ""type"": ""integer"", ""description"": ""排屋单元序号，从 0 开始"" },
+    ""rowCount"": { ""type"": ""integer"", ""description"": ""排屋单元总数"" }
   },
   ""required"": [""slotId"", ""semantic"", ""x"", ""y"", ""kind""]
 }";
@@ -159,7 +163,7 @@ namespace EpicSpark.Graybox
         // ─────────────────────────── 提示词 ───────────────────────────
 
         /// <summary>系统提示词：把 LLM 约束成「灰盒编辑器操作员」。</summary>
-        public static string BuildSystemPrompt(SceneSpec scene)
+        public static string BuildSystemPrompt(SceneSpec scene, LayoutSpec spec = null)
         {
             float width = scene != null && scene.width > 1f ? scene.width : 60f;
             float length = scene != null && scene.length > 1f ? scene.length : 60f;
@@ -189,12 +193,26 @@ namespace EpicSpark.Graybox
             sb.AppendLine("  · 给定 NPC 必须每人一条 define_npc_route，并在其活动区域放一个 kind=npc、bindId=npcId 的槽位。");
             sb.AppendLine("  · 给定锚点必须放一个 kind=anchor、bindId=anchorId 的槽位（场景边缘或建筑旁），semantic 描述载体。");
             sb.AppendLine("  · 给定道具必须放一个 kind=prop、bindId=propId 的槽位。");
-            sb.AppendLine("  · 全部完成后再调用 finish_graybox。");
+            if (spec != null && spec.Usable)
+            {
+                sb.AppendLine();
+                sb.AppendLine("本次是【执行模式】：系统已经给出 LayoutSpec（剧情施工图），seed 槽位就是规格要求。");
+                sb.AppendLine("  · seed 槽位带 specItemId/rowId/rowCount；必须原样保留，不能删除、不能合并、不能减少数量。");
+                sb.AppendLine("  · 每个规格项对应一个槽位；连续街屋的每个单元都要保留，单元之间不得留缝、不得把多个单元合成一个大房子。");
+                sb.AppendLine("  · 规格项的坐标/尺寸/朝向/kind/bindId 是硬约束；只有和道路/其他槽位冲突时才允许做不超过 1.5 米的微调，并保持 streetClearance。");
+                sb.AppendLine("  · seed 里的区域/道路已由规格给出，不要用 define_region/define_path 重复定义；确需调整时只改已有条目的参数。");
+                sb.AppendLine("  · 可以新增规格外的装饰/道具槽，但不能压进道路、不能与规格建筑重叠。");
+                sb.AppendLine("  · 必须调用 finish_graybox；未调用视为计划未完成。");
+            }
+            else
+            {
+                sb.AppendLine("  · 全部完成后再调用 finish_graybox。");
+            }
             return sb.ToString();
         }
 
         /// <summary>用户提示词：把 SceneSpec 的文字与剧情单位压成结构化输入。</summary>
-        public static string BuildUserPrompt(GrayboxRequest request)
+        public static string BuildUserPrompt(GrayboxRequest request, LayoutSpec spec = null)
         {
             SceneSpec scene = request != null ? request.scene : null;
             var sb = new StringBuilder(1024);
@@ -212,6 +230,73 @@ namespace EpicSpark.Graybox
             sb.AppendLine("布局要求: " + Safe(scene.layoutDescription));
             sb.AppendLine("剧情流程: " + Safe(scene.flowDescription));
             sb.AppendLine("搭建要求: " + Safe(scene.buildRequirement));
+            if (spec != null && spec.Usable)
+            {
+                sb.AppendLine();
+                sb.AppendLine("【LayoutSpec：剧情施工图（硬约束，逐项执行）】");
+                sb.AppendLine("单位：米；坐标原点在场景中心；rowId 相同的槽位是连续街屋，必须保持 rowCount 个单元和相邻关系。");
+                for (int i = 0; i < spec.items.Count; i++)
+                {
+                    LayoutItemSpec item = spec.items[i];
+                    if (item == null) continue;
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                        "- id={0} | kind={1} | center=({2:0.##},{3:0.##}) | size=({4:0.##}×{5:0.##}) | height={6:0.##}"
+                        + " | rot={7:0.#} | rowId={8} | rowIndex={9}/{10} | bindId={11} | required={12} | {13}",
+                        Safe(item.id), item.kind, item.center.x, item.center.y, item.size.x, item.size.y,
+                        item.height, item.rotation, Safe(item.rowId), item.rowIndex + 1, item.rowCount,
+                        Safe(item.bindId), item.required ? "true" : "false", Safe(item.name)));
+                }
+                if (spec.zones != null && spec.zones.Count > 0)
+                {
+                    sb.AppendLine("地面分区约束（regions 必须逐条照建，不能合并/不能新增）：");
+                    for (int i = 0; i < spec.zones.Count; i++)
+                    {
+                        LayoutZoneSpec zone = spec.zones[i];
+                        if (zone == null) continue;
+                        sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                            "- {0} | kind={1} | 范围=({2}…) | {3}",
+                            Safe(zone.zoneId), Safe(zone.kind), PolygonEndpoints(zone.polygon), Safe(zone.description)));
+                    }
+                }
+                if (spec.npcs != null && spec.npcs.Count > 0)
+                {
+                    sb.AppendLine("NPC 走位约束（npcPaths 必须逐条照建，起点不得改成出生点）：");
+                    for (int i = 0; i < spec.npcs.Count; i++)
+                    {
+                        LayoutNpcSpec npc = spec.npcs[i];
+                        if (npc == null) continue;
+                        string start = "（无点）";
+                        if (npc.waypoints != null && npc.waypoints.Count > 0)
+                        {
+                            Vector2 p = npc.waypoints[0];
+                            start = string.Format(CultureInfo.InvariantCulture, "({0:0.##},{1:0.##})", p.x, p.y);
+                        }
+                        sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                            "- npcId={0} | 名字={1} | 起点={2} | 点数={3}",
+                            Safe(npc.npcId), Safe(npc.name), start, npc.waypoints != null ? npc.waypoints.Count : 0));
+                    }
+                }
+                if (spec.paths != null && spec.paths.Count > 0)
+                {
+                    sb.AppendLine("道路/墙体约束：");
+                    for (int i = 0; i < spec.paths.Count; i++)
+                    {
+                        LayoutPathSpec path = spec.paths[i];
+                        if (path == null) continue;
+                        string endpoints = "";
+                        if (path.nodes != null && path.nodes.Count >= 2)
+                        {
+                            Vector2 a = path.nodes[0];
+                            Vector2 b = path.nodes[path.nodes.Count - 1];
+                            endpoints = string.Format(CultureInfo.InvariantCulture,
+                                " | ({0:0.##},{1:0.##})→({2:0.##},{3:0.##})", a.x, a.y, b.x, b.y);
+                        }
+                        sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                            "- {0} | kind={1} | width={2:0.##} | nodes={3}{4}", Safe(path.pathId), Safe(path.kind),
+                            path.width, path.nodes != null ? path.nodes.Count : 0, endpoints));
+                    }
+                }
+            }
             if (!string.IsNullOrEmpty(request.knowledgeContext))
             {
                 sb.AppendLine();
@@ -284,8 +369,8 @@ namespace EpicSpark.Graybox
                 {
                     GrayboxRegion region = plan.regions[i];
                     if (region == null) continue;
-                    sb.AppendLine("  - " + Safe(region.regionId) + " [" + Safe(region.kind) + "] 顶点数 "
-                        + (region.polygon != null ? region.polygon.Count : 0));
+                    sb.AppendLine("  - " + Safe(region.regionId) + " [" + Safe(region.kind) + "] " + Safe(region.description)
+                        + " 顶点数 " + (region.polygon != null ? region.polygon.Count : 0));
                 }
             }
             sb.AppendLine("条状物 " + (plan.paths != null ? plan.paths.Count : 0) + " 条");
@@ -295,8 +380,15 @@ namespace EpicSpark.Graybox
                 {
                     GrayboxPath path = plan.paths[i];
                     if (path == null) continue;
-                    sb.AppendLine("  - " + Safe(path.pathId) + " [" + Safe(path.kind) + "] 节点 "
-                        + (path.nodes != null ? path.nodes.Count : 0));
+                    string endpoints = "";
+                    if (path.nodes != null && path.nodes.Count >= 2)
+                    {
+                        Vector2 a = path.nodes[0];
+                        Vector2 b = path.nodes[path.nodes.Count - 1];
+                        endpoints = " (" + Format(a.x) + "," + Format(a.y) + ")→(" + Format(b.x) + "," + Format(b.y) + ")";
+                    }
+                    sb.AppendLine("  - " + Safe(path.pathId) + " [" + Safe(path.kind) + "] width="
+                        + Format(path.width) + endpoints);
                 }
             }
             sb.AppendLine("语义槽 " + (plan.slots != null ? plan.slots.Count : 0) + " 个");
@@ -306,10 +398,34 @@ namespace EpicSpark.Graybox
                 {
                     GrayboxSlot slot = plan.slots[i];
                     if (slot == null) continue;
-                    sb.AppendLine("  - " + Safe(slot.slotId) + " [" + slot.kind + "] " + Safe(slot.semantic));
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                        "  - {0} [{1}] ({2:0.##},{3:0.##}) size=({4:0.##}×{5:0.##}) h={6:0.##} rot={7:0.#}"
+                        + " spec={8} row={9}/{10} bind={11} required={12} | {13}",
+                        Safe(slot.slotId), slot.kind, slot.position.x, slot.position.y,
+                        slot.sizeX, slot.sizeY, slot.height, slot.rotation, Safe(slot.specItemId),
+                        slot.rowIndex + 1, slot.rowCount, Safe(slot.bindId),
+                        slot.specRequired ? "true" : "false", Safe(slot.semantic)));
                 }
             }
             sb.AppendLine("NPC 动线 " + (plan.npcPaths != null ? plan.npcPaths.Count : 0) + " 条");
+            if (plan.npcPaths != null)
+            {
+                for (int i = 0; i < plan.npcPaths.Count; i++)
+                {
+                    NpcPath path = plan.npcPaths[i];
+                    if (path == null) continue;
+                    string start = "（无点）";
+                    if (path.waypoints != null && path.waypoints.Count > 0)
+                    {
+                        Vector2 p = path.waypoints[0];
+                        start = string.Format(CultureInfo.InvariantCulture, "({0:0.##},{1:0.##})", p.x, p.y);
+                    }
+                    sb.AppendLine("  - " + Safe(path.npcId) + " 起点=" + start + " 点数="
+                        + (path.waypoints != null ? path.waypoints.Count : 0));
+                }
+            }
+            if (plan.specDriven)
+                sb.AppendLine("模式: LayoutSpec 执行（seed 槽位/分区/动线必须保留，finish_graybox 必须调用）");
             return sb.ToString();
         }
 
@@ -321,6 +437,19 @@ namespace EpicSpark.Graybox
         private static string Format(float value)
         {
             return value.ToString("0.##", CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>多边形 → "(minX,minZ)→(maxX,maxZ)" 形式的包围盒文字（提示词用）。</summary>
+        private static string PolygonEndpoints(List<Vector2> polygon)
+        {
+            if (polygon == null || polygon.Count == 0) return "空";
+            float x0 = float.MaxValue, x1 = float.MinValue, z0 = float.MaxValue, z1 = float.MinValue;
+            for (int i = 0; i < polygon.Count; i++)
+            {
+                x0 = Mathf.Min(x0, polygon[i].x); x1 = Mathf.Max(x1, polygon[i].x);
+                z0 = Mathf.Min(z0, polygon[i].y); z1 = Mathf.Max(z1, polygon[i].y);
+            }
+            return string.Format(CultureInfo.InvariantCulture, "({0:0.##},{1:0.##})→({2:0.##},{3:0.##})", x0, z0, x1, z1);
         }
 
         // ─────────────────────────── 参数解析辅助 ───────────────────────────
@@ -450,6 +579,10 @@ namespace EpicSpark.Graybox
             public string kind = "prop";
             public string bindId = "";
             public string expectedModelHint = "";
+            public string specItemId = "";
+            public string rowId = "";
+            public int rowIndex;
+            public int rowCount = 1;
         }
 
         [Serializable]

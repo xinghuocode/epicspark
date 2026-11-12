@@ -157,6 +157,10 @@ namespace EpicSpark.Build
             float slotY = slot != null ? slot.sizeY : 4f;
             if (slotX <= 0f) slotX = 4f;
             if (slotY <= 0f) slotY = slotX;
+            // 剧情规格槽位的建筑占地是施工图硬约束：必须原尺寸落地，
+            // 不能按类别随机拉宽到 6~20 米，否则连续街屋会互相压住、侵入街道。
+            if (slot != null && slot.specRequired && slot.kind == SlotKind.Building)
+                return new SlotSize { x = slotX, y = slotY };
             float jitter = 0.9f + Deterministic01((slot != null ? slot.slotId : string.Empty) + "|size") * 0.2f;
 
             switch (category)
@@ -250,6 +254,8 @@ namespace EpicSpark.Build
             if (category == "building") range = 6f;
             else if (category == "structure") range = 4f;
             else if (category == "furniture") range = 12f;
+            // 连续街屋要的是「共用山墙」，任何角度抖动都会在单元之间制造 V 形缝或角部重叠。
+            if (slot.specRequired) range = 0f;
             float jitter = (Deterministic01((slot.slotId ?? string.Empty) + "|rot|" + category) * 2f - 1f) * range;
             return Mathf.DeltaAngle(0f, slot.rotation + jitter);
         }
@@ -277,6 +283,7 @@ namespace EpicSpark.Build
                 rotationY = RotationFor(slot, category),
                 sizeX = size.x,
                 sizeY = size.y,
+                height = slot.height,
                 generated = generated,
                 matchScore = Mathf.Clamp01(matchScore),
                 kind = slot.kind,
@@ -303,6 +310,7 @@ namespace EpicSpark.Build
                 rotationY = Mathf.DeltaAngle(0f, slot.rotation),
                 sizeX = size,
                 sizeY = size,
+                height = slot.height,
                 generated = false,
                 matchScore = 0f,
                 kind = slot.kind,

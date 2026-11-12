@@ -1,4 +1,4 @@
-// 传送锚点：玩家进入半径并按 E 时记录日志、推进游戏时间，并把剧情推进交给 AnchorRouter。
+// 传送锚点：只负责检测交互并路由给 AnchorRouter；日志与时间推进由 GameDirector 统一执行一次。
 using UnityEngine;
 using EpicSpark.Core;
 using EpicSpark.Player;
@@ -16,7 +16,8 @@ namespace EpicSpark.Anchors
 
         [Header("触发")]
         public float triggerRadius = 2.5f;
-        public KeyCode interactKey = KeyCode.E;
+        [Tooltip("与星火神殿一致：鼠标右键交互")]
+        public KeyCode interactKey = KeyCode.Mouse1;
         public float cooldownSeconds = 1f;
 
         [Header("可视化")]
@@ -39,7 +40,7 @@ namespace EpicSpark.Anchors
             get
             {
                 string label = DisplayName;
-                string tip = "按 " + interactKey + " 进入「" + label + "」";
+                string tip = "按 " + KeyLabel(interactKey) + " 进入「" + label + "」";
                 if (Spec != null && !string.IsNullOrEmpty(Spec.timeDelta)) tip += "（时间跃迁 " + Spec.timeDelta + "）";
                 return tip;
             }
@@ -88,9 +89,22 @@ namespace EpicSpark.Anchors
 
             EpicSparkPlayerController player = RuntimeContext.Player;
             if (player == null) return;
-            if (!player.InputEnabled) return;
+            if (!player.InputEnabled || !player.IsCursorLocked) return;
             if (!InRange(player.transform.position)) return;
-            if (Input.GetKeyDown(interactKey)) TryEnter(player);
+            if (Input.GetKeyDown(interactKey))
+            {
+                // 准星正对着别的可交互对象时，让右键优先作用于它，避免误触附近锚点。
+                if (player.CurrentInteractable != null && !(player.CurrentInteractable is AnchorPoint)) return;
+                TryEnter(player);
+            }
+        }
+
+        private static string KeyLabel(KeyCode key)
+        {
+            if (key == KeyCode.Mouse0) return "鼠标左键";
+            if (key == KeyCode.Mouse1) return "鼠标右键";
+            if (key == KeyCode.Mouse2) return "鼠标中键";
+            return key.ToString();
         }
 
         public void Interact(EpicSparkPlayerController source)
@@ -120,26 +134,8 @@ namespace EpicSpark.Anchors
 
             _nextEnterTime = Time.unscaledTime + Mathf.Max(0f, cooldownSeconds);
 
-            string anchorId = Spec != null && !string.IsNullOrEmpty(Spec.anchorId) ? Spec.anchorId : name;
-            string label = DisplayName;
-            string detail = "玩家进入传送锚点「" + label + "」";
-            if (Spec != null && !string.IsNullOrEmpty(Spec.timeDelta))
-                detail += "，时间跃迁 " + Spec.timeDelta;
-            if (Spec != null && !string.IsNullOrEmpty(Spec.targetSceneName))
-                detail += "，前往「" + Spec.targetSceneName + "」";
-
-            GameLog.Record(new PlayerActionRecord
-            {
-                sceneId = RuntimeContext.ResolveSceneId(),
-                actorId = "player",
-                actionType = "enter_anchor",
-                targetId = anchorId,
-                detail = detail,
-                gameMinutes = GameClock.TotalMinutes,
-                position = transform.position,
-            });
-
-            if (Spec != null && !string.IsNullOrEmpty(Spec.timeDelta)) GameClock.AddDelta(Spec.timeDelta);
+            // 行为日志与时间推进统一由 GameDirector.HandleAnchorAsync 负责。
+            // 这里只路由请求，避免一次交互被记录两次、timeDelta 被叠加两次。
 
             AnchorRouter router = AnchorRouter.Instance;
             if (router == null) router = AnchorRouter.EnsureInstance();

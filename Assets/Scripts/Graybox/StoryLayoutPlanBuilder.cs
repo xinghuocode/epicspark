@@ -1,4 +1,4 @@
-﻿// 把「剧情布局解析结果」变成灰盒规划：区域、道路、语义槽全部按剧情给的坐标来。
+// 把「剧情布局解析结果」变成灰盒规划：区域、道路、语义槽全部按剧情给的坐标来。
 // 这是"像人类做地编"的关键一步：剧情 Agent 已经把市政厅放在北侧、城门放在东边界、
 // 街道中心线 Z=+2，这里必须照着摆，而不是按 archetype 重新随机铺一遍。
 using System;
@@ -15,13 +15,15 @@ namespace EpicSpark.Graybox
         /// <summary>
         /// 尝试用剧情布局生成规划。解析不出足够信息时返回 false，调用方退回 archetype 规划。
         /// </summary>
-        public static bool TryBuild(SceneSpec scene, GrayboxRequest request, GrayboxPlan plan, out string note)
+        public static bool TryBuild(SceneSpec scene, GrayboxRequest request, GrayboxPlan plan, out string note,
+            LayoutSpec spec = null)
         {
             note = "";
             if (scene == null || plan == null) return false;
 
             StoryLayout layout = StoryLayoutParser.Parse(scene.layoutDescription);
-            if (!layout.Usable) return false;
+            bool specDriven = spec != null && spec.Usable;
+            if (!layout.Usable && !specDriven) return false;
 
             // ── 1) 场景尺寸：覆盖所有地标/分区，留 4 米边距，夹在 30..160 ──
             float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
@@ -72,6 +74,7 @@ namespace EpicSpark.Graybox
 
             plan.width = width;
             plan.length = length;
+            plan.specDriven = false;
             float halfW = width * 0.5f;
             float halfL = length * 0.5f;
 
@@ -79,28 +82,55 @@ namespace EpicSpark.Graybox
             Vector2 shift = Vector2.zero;
             if (Mathf.Abs(centerX) > halfW * 0.5f || Mathf.Abs(centerZ) > halfL * 0.5f)
                 shift = new Vector2(-centerX * 0.5f, -centerZ * 0.5f);
+            plan.layoutShift = shift;
 
             // ── 2) 出生点 ──
             Vector2 spawn = new Vector2(scene.spawnPoint.x, scene.spawnPoint.z);
             if (spawn == Vector2.zero) spawn = new Vector2(shift.x, -halfL + 5f);
             plan.spawnPoint = ClampToBounds(spawn, halfW, halfL);
 
-            // ── 3) 地面分区：解析出来的优先，否则铺一块覆盖全场的广场 ──
+            // ── 3) 地面分区：施工图（spec.zones）是唯一来源；没有才退回解析结果 ──
             plan.regions = new List<GrayboxRegion>();
-            for (int i = 0; i < layout.zones.Count; i++)
+            if (spec != null && spec.zones != null && spec.zones.Count > 0)
             {
-                LayoutZone zone = layout.zones[i];
-                plan.regions.Add(new GrayboxRegion
+                for (int i = 0; i < spec.zones.Count; i++)
                 {
-                    regionId = "region_" + zone.kind + "_" + i.ToString(CultureInfo.InvariantCulture),
-                    kind = zone.kind,
-                    description = string.IsNullOrEmpty(zone.name) ? zone.kind : zone.name,
-                    style = zone.kind,
-                    polygon = RectPolygon(zone.minX + shift.x, zone.minZ + shift.y,
-                        zone.maxX + shift.x, zone.maxZ + shift.y),
-                    groundHeight = zone.kind == "water" ? -0.35f : 0f,
-                    areaWeight = 1f,
-                });
+                    LayoutZoneSpec zone = spec.zones[i];
+                    if (zone == null || zone.polygon == null || zone.polygon.Count < 3) continue;
+                    var poly = new List<Vector2>(zone.polygon.Count);
+                    for (int p = 0; p < zone.polygon.Count; p++)
+                        poly.Add(ClampToBounds(zone.polygon[p] + shift, halfW, halfL));
+                    plan.regions.Add(new GrayboxRegion
+                    {
+                        regionId = string.IsNullOrEmpty(zone.zoneId)
+                            ? "region_" + zone.kind + "_" + i.ToString(CultureInfo.InvariantCulture)
+                            : "region_" + zone.zoneId,
+                        kind = string.IsNullOrEmpty(zone.kind) ? "square" : zone.kind,
+                        description = string.IsNullOrEmpty(zone.description) ? zone.kind : zone.description,
+                        style = string.IsNullOrEmpty(zone.kind) ? "square" : zone.kind,
+                        polygon = poly,
+                        groundHeight = zone.groundHeight,
+                        areaWeight = 1f,
+                    });
+                }
+            }
+            else
+            {
+                for (int i = 0; i < layout.zones.Count; i++)
+                {
+                    LayoutZone zone = layout.zones[i];
+                    plan.regions.Add(new GrayboxRegion
+                    {
+                        regionId = "region_" + zone.kind + "_" + i.ToString(CultureInfo.InvariantCulture),
+                        kind = zone.kind,
+                        description = string.IsNullOrEmpty(zone.name) ? zone.kind : zone.name,
+                        style = zone.kind,
+                        polygon = RectPolygon(zone.minX + shift.x, zone.minZ + shift.y,
+                            zone.maxX + shift.x, zone.maxZ + shift.y),
+                        groundHeight = zone.kind == "water" ? -0.35f : 0f,
+                        areaWeight = 1f,
+                    });
+                }
             }
             if (plan.regions.Count == 0)
             {
@@ -116,20 +146,41 @@ namespace EpicSpark.Graybox
                 });
             }
 
-            // ── 4) 道路 ──
+            // ── 4) 道路：施工图优先 ──
             plan.paths = new List<GrayboxPath>();
-            for (int i = 0; i < layout.paths.Count; i++)
+            if (spec != null && spec.paths != null && spec.paths.Count > 0)
             {
-                LayoutPath path = layout.paths[i];
-                var grayboxPath = new GrayboxPath
+                for (int i = 0; i < spec.paths.Count; i++)
                 {
-                    pathId = "path_" + i.ToString(CultureInfo.InvariantCulture),
-                    kind = "road",
-                    width = path.width,
-                };
-                for (int n = 0; n < path.nodes.Count; n++)
-                    grayboxPath.nodes.Add(ClampToBounds(path.nodes[n] + shift, halfW, halfL));
-                plan.paths.Add(grayboxPath);
+                    LayoutPathSpec path = spec.paths[i];
+                    if (path == null || path.nodes == null || path.nodes.Count < 2) continue;
+                    var grayboxPath = new GrayboxPath
+                    {
+                        pathId = string.IsNullOrEmpty(path.pathId) ? "path_" + i.ToString(CultureInfo.InvariantCulture) : path.pathId,
+                        kind = string.IsNullOrEmpty(path.kind) ? "road" : path.kind,
+                        width = path.width,
+                    };
+                    for (int n = 0; n < path.nodes.Count; n++)
+                        grayboxPath.nodes.Add(ClampToBounds(path.nodes[n] + shift, halfW, halfL));
+                    plan.paths.Add(grayboxPath);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < layout.paths.Count; i++)
+                {
+                    LayoutPath path = layout.paths[i];
+                    var grayboxPath = new GrayboxPath
+                    {
+                        pathId = "path_" + i.ToString(CultureInfo.InvariantCulture),
+                        // 边界墙也是 LayoutPath，不能再统一写成 road，否则会被铺成可走的路面。
+                        kind = string.IsNullOrEmpty(path.kind) ? "road" : path.kind,
+                        width = path.width,
+                    };
+                    for (int n = 0; n < path.nodes.Count; n++)
+                        grayboxPath.nodes.Add(ClampToBounds(path.nodes[n] + shift, halfW, halfL));
+                    plan.paths.Add(grayboxPath);
+                }
             }
 
             // 补齐缺失的轴向主干：只有一条南北街时，补一条东西街，让空间骨架是"十字"而不是"一条胡同"
@@ -139,6 +190,7 @@ namespace EpicSpark.Graybox
             {
                 GrayboxPath existingPath = plan.paths[i];
                 if (existingPath == null || existingPath.nodes == null || existingPath.nodes.Count < 2) continue;
+                if (!string.Equals(existingPath.kind, "road", StringComparison.OrdinalIgnoreCase)) continue;
                 Vector2 first = existingPath.nodes[0];
                 Vector2 last = existingPath.nodes[existingPath.nodes.Count - 1];
                 if (Mathf.Abs(last.x - first.x) >= Mathf.Abs(last.y - first.y)) hasEastWest = true;
@@ -185,6 +237,8 @@ namespace EpicSpark.Graybox
 
             // ── 5) 语义槽：先放地标，再绑剧情单位 ──
             plan.slots = new List<GrayboxSlot>();
+            // 大场景的 70 米集市棚、长条官署不能被 60 米硬上限削短。
+            float maxLandmarkSize = Mathf.Clamp(Mathf.Max(60f, Mathf.Max(width, length) * 0.9f), 60f, 180f);
             var placedNames = new List<string>();
             for (int i = 0; i < layout.items.Count; i++)
             {
@@ -198,8 +252,8 @@ namespace EpicSpark.Graybox
                     semantic = semantic,
                     position = pos,
                     rotation = item.rotation,
-                    sizeX = Mathf.Clamp(item.width, 0.8f, 60f),
-                    sizeY = Mathf.Clamp(item.depth, 0.8f, 60f),
+                    sizeX = Mathf.Clamp(item.width, 0.8f, maxLandmarkSize),
+                    sizeY = Mathf.Clamp(item.depth, 0.8f, maxLandmarkSize),
                     kind = ToSlotKind(item.kind),
                     expectedModelHint = item.name,
                 };
@@ -209,9 +263,49 @@ namespace EpicSpark.Graybox
 
             AddStoryUnits(plan, scene, halfW, halfL, shift, placedNames, layout);
 
-            // ── 6) NPC 动线 ──
+            // 槽位按"到出生点的距离"排序：搭建立即从近处开始，远处可以晚一点出现
+            if (plan.slots != null && plan.slots.Count > 1)
+            {
+                Vector2 spawnRef = plan.spawnPoint;
+                plan.slots.Sort((a, b) =>
+                    Vector2.Distance(a.position, spawnRef).CompareTo(Vector2.Distance(b.position, spawnRef)));
+            }
+
+            // 流式加载分段：60 米内第 0 段，60–120 第 1 段，以此类推
+            if (plan.slots != null)
+            {
+                int maxSegment = 0;
+                for (int i = 0; i < plan.slots.Count; i++)
+                {
+                    GrayboxSlot slot = plan.slots[i];
+                    if (slot == null) continue;
+                    int segment = Mathf.FloorToInt(Vector2.Distance(slot.position, plan.spawnPoint) / 60f);
+                    slot.segment = Mathf.Max(0, segment);
+                    if (slot.segment > maxSegment) maxSegment = slot.segment;
+                }
+                plan.segmentCount = maxSegment + 1;
+            }
+
+            // ── 6) NPC 动线：施工图（spec.npcs）是唯一来源，不再从出生点合成 ──
             plan.npcPaths = new List<NpcPath>();
-            if (scene.npcs != null)
+            if (spec != null && spec.npcs != null && spec.npcs.Count > 0)
+            {
+                for (int i = 0; i < spec.npcs.Count; i++)
+                {
+                    LayoutNpcSpec npc = spec.npcs[i];
+                    if (npc == null || npc.waypoints == null || npc.waypoints.Count < 2) continue;
+                    var npcPath = new NpcPath
+                    {
+                        npcId = npc.npcId ?? string.Empty,
+                        loop = npc.loop,
+                        speed = 1.1f,
+                    };
+                    for (int w = 0; w < npc.waypoints.Count; w++)
+                        npcPath.waypoints.Add(ClampToBounds(npc.waypoints[w] + shift, halfW, halfL));
+                    plan.npcPaths.Add(npcPath);
+                }
+            }
+            else if (scene.npcs != null)
             {
                 for (int i = 0; i < scene.npcs.Count; i++)
                 {
@@ -277,12 +371,15 @@ namespace EpicSpark.Graybox
                 {
                     SceneAnchorSpec anchor = scene.anchors[i];
                     if (anchor == null || string.IsNullOrEmpty(anchor.anchorId)) continue;
-                    Vector2 pos = new Vector2(anchor.localPosition.x, anchor.localPosition.z);
+                    // 先信布局文本里的载体坐标（例如「出租马车停在 (0,-38)」），
+                    // localPosition 可能是 Story 兜底扇形填的，不能反过来覆盖文本。
+                    Vector2 pos = MatchItem(layout, anchor.displayName);
+                    if (pos == Vector2.zero) pos = MatchItem(layout, anchor.requirement);
                     if (pos == Vector2.zero && StoryLayoutParser.TryFindPoint(anchor.description, out Vector2 anchorPoint))
                         pos = anchorPoint;
                     if (pos == Vector2.zero && StoryLayoutParser.TryFindPoint(anchor.requirement, out Vector2 anchorPoint2))
                         pos = anchorPoint2;
-                    if (pos == Vector2.zero) pos = MatchItem(layout, anchor.displayName);
+                    if (pos == Vector2.zero) pos = new Vector2(anchor.localPosition.x, anchor.localPosition.z);
                     if (pos == Vector2.zero) pos = plan.spawnPoint;
                     pos = ClampToBounds(pos + shift, halfW, halfL);
                     plan.slots.Add(new GrayboxSlot

@@ -127,7 +127,7 @@ namespace EpicSpark.Bootstrap
             titleRt.anchoredPosition = new Vector2(0f, 300f);
             title.fontStyle = FontStyle.Bold;
 
-            var subtitle = CreateText("Subtitle", _root.transform, "星火史纪 · AI 驱动的历史沉浸体验", 30,
+            var subtitle = CreateText("Subtitle", _root.transform, "星火史诗 · AI 驱动的历史沉浸体验", 30,
                 new Color(0.62f, 0.68f, 0.72f));
             var subRt = subtitle.rectTransform;
             subRt.anchorMin = new Vector2(0.5f, 0.5f);

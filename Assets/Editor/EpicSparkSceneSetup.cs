@@ -1,4 +1,4 @@
-﻿// 编辑器工具：生成 EpicSpark 主场景，并可被命令行 batchmode 调用。
+// 编辑器工具：生成 EpicSpark 主场景，并可被命令行 batchmode 调用。
 // 菜单：EpicSpark/生成主场景
 // 命令行：Unity.exe -batchmode -quit -projectPath <工程> -executeMethod EpicSpark.EditorTools.EpicSparkSceneSetup.BuildAndSave -logFile <日志>
 using System;
@@ -13,6 +13,27 @@ namespace EpicSpark.EditorTools
     public static class EpicSparkSceneSetup
     {
         public const string ScenePath = "Assets/Scenes/EpicSpark.unity";
+        public const string TempleStartScenePath = "Assets/Scenes/StarTempleStart.unity";
+        /// <summary>旧版平面菜单开始场景（已移出 Build Settings，保留回退）。</summary>
+        public const string StartScenePath = "Assets/Scenes/StartScene.unity";
+
+        [MenuItem("EpicSpark/打开开始场景（星火神殿）", false, 0)]
+        public static void OpenStartScene()
+        {
+            if (System.IO.File.Exists(TempleStartScenePath))
+            {
+                EditorSceneManager.OpenScene(TempleStartScenePath);
+                Debug.Log("[EpicSpark] 已打开星火神殿开始场景，按 Play 即可开始。");
+                return;
+            }
+            if (System.IO.File.Exists(StartScenePath))
+            {
+                EditorSceneManager.OpenScene(StartScenePath);
+                Debug.LogWarning("[EpicSpark] 未找到 StarTempleStart.unity，已退回旧版平面菜单开始场景。");
+                return;
+            }
+            Debug.LogError("[EpicSpark] 找不到神殿开始场景（未移植？）。");
+        }
 
         [MenuItem("EpicSpark/打开主场景（EpicSpark.unity）", false, 1)]
         public static void OpenMainScene()
@@ -99,9 +120,16 @@ namespace EpicSpark.EditorTools
                     return;
                 }
             }
-            scenes.Insert(0, new EditorBuildSettingsScene(scenePath, true));
+            // 主场景必须排在开始场景之后，保证整包启动仍先进入神殿。
+            int insertAt = 0;
+            for (int i = 0; i < scenes.Count; i++)
+            {
+                if (scenes[i].path == TempleStartScenePath || scenes[i].path == StartScenePath)
+                    insertAt = i + 1;
+            }
+            scenes.Insert(insertAt, new EditorBuildSettingsScene(scenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
-            Debug.Log("[EpicSpark] 已加入 Build Settings: " + scenePath);
+            Debug.Log("[EpicSpark] 已加入 Build Settings: " + scenePath + "（位置 " + insertAt + "）");
         }
 
         [MenuItem("EpicSpark/打开存档目录")]

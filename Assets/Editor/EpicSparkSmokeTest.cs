@@ -97,11 +97,15 @@ namespace EpicSpark.EditorTools
             }
 
             // 进入 Play Mode 会触发域重载并清空静态字段，所以用 PlayerPrefs 传递参数
+            // 冒烟必须真正离线：保存并暂时覆盖本机远端开关，结束后恢复，不产生剧情网络请求。
+            SessionState.SetInt("EpicSpark.Smoke.OriginalOffline", PlayerPrefs.GetInt(ApiConfig.PrefOffline, 0));
+            PlayerPrefs.SetInt(ApiConfig.PrefOffline, 1);
             PlayerPrefs.SetInt("EpicSpark.TestAutoStart", 1);
             PlayerPrefs.SetString("EpicSpark.TestAutoStartEvent", "攻占巴士底狱");
             PlayerPrefs.SetInt("EpicSpark.VerboseMatching", 1);
             PlayerPrefs.Save();
             Append(KeyNotes, "autoStartEvent=攻占巴士底狱");
+            Append(KeyNotes, "forcedOffline=true（测试结束后恢复原设置）");
 
             Application.logMessageReceived -= OnLog;
             Application.logMessageReceived += OnLog;
@@ -499,12 +503,13 @@ namespace EpicSpark.EditorTools
             for (int i = 0; i < errors.Count && i < 12; i++) Debug.LogError("[SmokeTest] error: " + errors[i]);
 
             // 清理测试期间塞进 PlayerPrefs 的开关，避免影响正常游玩
+            PlayerPrefs.SetInt(ApiConfig.PrefOffline, SessionState.GetInt("EpicSpark.Smoke.OriginalOffline", 0));
             PlayerPrefs.DeleteKey("EpicSpark.VerboseMatching");
             PlayerPrefs.DeleteKey("EpicSpark.TestAutoStart");
             PlayerPrefs.DeleteKey("EpicSpark.TestAutoStartEvent");
             PlayerPrefs.Save();
 
-            EditorApplication.Exit(code);
+            EditorApplication.Exit(code == 0 && errors.Count > 0 ? 2 : code);
         }
 
         private static string JsonList(List<string> items)

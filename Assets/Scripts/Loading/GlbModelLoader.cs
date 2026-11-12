@@ -254,7 +254,7 @@ namespace EpicSpark.Loading
                     baseColor = new Color(pbr.baseColorFactor[0], pbr.baseColorFactor[1], pbr.baseColorFactor[2], pbr.baseColorFactor[3]);
             }
 
-            Material material = CreateMaterial(texture, baseColor, roughness);
+            Material material = CreateMaterial(texture, baseColor, roughness, mesh);
             var model = new GlbModel
             {
                 sourceFile = fileName,
@@ -267,7 +267,7 @@ namespace EpicSpark.Loading
             return model;
         }
 
-        private static Material CreateMaterial(Texture2D texture, Color baseColor, float roughness)
+        private static Material CreateMaterial(Texture2D texture, Color baseColor, float roughness, Mesh mesh)
         {
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Standard");
@@ -284,6 +284,9 @@ namespace EpicSpark.Loading
             material.SetFloat("_Glossiness", Mathf.Clamp01(1f - roughness));
             material.SetFloat("_Metallic", 0f);
             if (material.HasProperty("_Cull")) material.SetFloat("_Cull", 2f);
+            // 近景细节层：按模型 UV 密度平铺高频颗粒，弥补 12 m 尺度下只有 38 texel/m 的不足。
+            // 关掉 DetailSurface.Enabled（或 PlayerPrefs epicspark.detail=0）即可完全回到改造前行为。
+            DetailSurface.Apply(material, mesh);
             return material;
         }
 

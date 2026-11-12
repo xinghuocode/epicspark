@@ -28,23 +28,29 @@ namespace EpicSpark.AssetGen
         [Tooltip("图生 3D 模型名。")]
         public string imageTo3DModel = "Hunyuan3D-2";
 
-        [Tooltip("文生图接口路径。")]
+        [Tooltip("文生图接口路径（gitee：JSON 提交）。")]
         public string textToImagePath = "/images/generations";
 
-        [Tooltip("抠图接口路径。")]
-        public string backgroundRemovalPath = "/images/background/removal";
+        [Tooltip("抠图接口路径（gitee：multipart 提交，实测 /images/mattings 可用）。")]
+        public string backgroundRemovalPath = "/images/mattings";
 
-        [Tooltip("图生 3D 提交/轮询接口路径（轮询会在其后追加 /{taskId}）。")]
-        public string imageTo3DPath = "/3d/generations";
+        [Tooltip("抠图兜底接口路径（旧网关可能是 /images/edits；失败会自动尝试）。")]
+        public string backgroundRemovalFallbackPath = "/images/edits";
+
+        [Tooltip("图生 3D 提交接口路径（gitee：multipart 提交异步任务）。")]
+        public string imageTo3DPath = "/async/image-to-3d";
+
+        [Tooltip("异步任务轮询接口前缀（其后追加 task_id）。")]
+        public string taskPath = "/task/";
 
         [Tooltip("单次 HTTP 请求超时（秒）。")]
         public int requestTimeoutSeconds = 180;
 
         [Tooltip("3D 任务轮询间隔（秒）。")]
-        public int pollIntervalSeconds = 3;
+        public int pollIntervalSeconds = 5;
 
-        [Tooltip("3D 任务轮询总超时（秒）。")]
-        public int pollTimeoutSeconds = 300;
+        [Tooltip("3D 任务轮询总超时（秒，默认 15 分钟）。")]
+        public int pollTimeoutSeconds = 900;
 
         [Tooltip("文生图边长（像素）。")]
         public int imageSize = 1024;
@@ -104,12 +110,60 @@ namespace EpicSpark.AssetGen
                 if (string.IsNullOrEmpty(json)) return settings;
                 AssetGenSettings loaded = JsonUtility.FromJson<AssetGenSettings>(json);
                 if (loaded != null) settings = loaded;
+                if (settings.MigrateLegacyEndpoints()) settings.Save();
             }
             catch (Exception e)
             {
                 Debug.LogWarning("[资产生成] 读取 assetgen 配置失败，使用默认（离线）配置: " + e.Message);
             }
             return settings;
+        }
+
+        /// <summary>
+        /// 把旧版（跑不通的）配置迁移到实测可用端点：
+        /// 旧版把抠图写成 /images/background/removal、图生 3D 写成 /3d/generations，
+        /// 且轮询 3s / 5min。已存在的 assetgen_config.json 不会因为代码默认值改变而自动更新，
+        /// 因此加载时做一次性迁移；用户自定义过的其它端点不会被覆盖。
+        /// </summary>
+        /// <returns>是否发生了迁移（true 时调用方应把新配置写回磁盘）。</returns>
+        public bool MigrateLegacyEndpoints()
+        {
+            bool changed = false;
+
+            if (string.Equals(backgroundRemovalPath, "/images/background/removal", StringComparison.OrdinalIgnoreCase))
+            {
+                backgroundRemovalPath = "/images/mattings";
+                changed = true;
+            }
+            if (string.Equals(imageTo3DPath, "/3d/generations", StringComparison.OrdinalIgnoreCase))
+            {
+                imageTo3DPath = "/async/image-to-3d";
+                changed = true;
+            }
+            if (string.IsNullOrEmpty(backgroundRemovalFallbackPath))
+            {
+                backgroundRemovalFallbackPath = "/images/edits";
+                changed = true;
+            }
+            if (string.IsNullOrEmpty(taskPath))
+            {
+                taskPath = "/task/";
+                changed = true;
+            }
+            if (pollIntervalSeconds <= 3 && pollTimeoutSeconds <= 300)
+            {
+                pollIntervalSeconds = 5;
+                pollTimeoutSeconds = 900;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                Debug.Log("[资产生成] 已把旧版 assetgen 配置迁移到实测可用的 gitee 端点："
+                          + "抠图=" + backgroundRemovalPath + " 图生3D=" + imageTo3DPath
+                          + " 轮询=" + taskPath + "{" + pollIntervalSeconds + "s, ≤" + pollTimeoutSeconds + "s}");
+            }
+            return changed;
         }
 
         /// <summary>把当前配置写盘（方便编辑器里手填 Key 后持久化）。</summary>
@@ -141,7 +195,9 @@ namespace EpicSpark.AssetGen
                 imageTo3DModel = imageTo3DModel,
                 textToImagePath = textToImagePath,
                 backgroundRemovalPath = backgroundRemovalPath,
+                backgroundRemovalFallbackPath = backgroundRemovalFallbackPath,
                 imageTo3DPath = imageTo3DPath,
+                taskPath = taskPath,
                 requestTimeoutSeconds = requestTimeoutSeconds,
                 pollIntervalSeconds = pollIntervalSeconds,
                 pollTimeoutSeconds = pollTimeoutSeconds,
@@ -156,9 +212,12 @@ namespace EpicSpark.AssetGen
         public string Describe()
         {
             return string.Format(CultureInfo.InvariantCulture,
-                "baseUrl={0} | 文生图={1} | 抠图={2} | 图生3D={3} | 远端可用={4}",
+                "baseUrl={0} | 文生图={1}{2} | 抠图={3}{4} | 图生3D={5}{6} | 轮询={7}{8} | 远端可用={9}",
                 string.IsNullOrEmpty(baseUrl) ? "(空)" : baseUrl,
-                textToImageModel, backgroundRemovalModel, imageTo3DModel,
+                textToImageModel, textToImagePath,
+                backgroundRemovalModel, backgroundRemovalPath,
+                imageTo3DModel, imageTo3DPath,
+                taskPath, pollIntervalSeconds,
                 HasRemote ? "是" : "否（离线兜底）");
         }
     }

@@ -198,8 +198,8 @@ namespace EpicSpark.Story
                 if (string.IsNullOrEmpty(scene.sceneName)) scene.sceneName = StoryWorld.TemplateDisplay(ParseSceneTemplate(scene.sceneId) ?? StoryTemplate.Square);
                 if (string.IsNullOrEmpty(scene.era)) scene.era = profile.eraName;
                 if (string.IsNullOrEmpty(scene.region)) scene.region = profile.regionName;
-                if (scene.width <= 0f) scene.width = SceneSize;
-                if (scene.length <= 0f) scene.length = SceneSize;
+                scene.width = EpicSpark.Core.SceneSize.SideOrDefault(scene.width, SceneSize);
+                scene.length = EpicSpark.Core.SceneSize.SideOrDefault(scene.length, SceneSize);
                 // 出生点必须落在南侧安全区；契约默认值 (0, 1.2, 0) 在场地中央，需要纠正
                 Vector3 spawn = scene.spawnPoint;
                 bool spawnValid = spawn.z <= -8f && spawn.z >= -29f && Mathf.Abs(spawn.x) <= 27f
@@ -353,6 +353,8 @@ namespace EpicSpark.Story
 
         private static string BuildSceneName(EraProfile profile, StoryTemplate template, StoryStage stage, SeedRandom rng)
         {
+            if (profile.era == StoryEra.Unknown)
+                return "离线通用场景（" + StoryWorld.StageLabel(stage) + " · 未确认历史地点）";
             string[] pool;
             switch (template)
             {
@@ -1103,6 +1105,13 @@ namespace EpicSpark.Story
             else
             {
                 sb.Append("你站在").Append(scene.sceneName).Append("的入口，");
+            }
+
+            if (profile.era == StoryEra.Unknown)
+            {
+                sb.Append("当前是离线未验证的通用场景：系统未能可靠确认「").Append(eventName)
+                  .Append("」的具体年代与地点，这里只提供通用交互，不作为该事件的史实复现。");
+                return sb.ToString();
             }
 
             switch (stage)

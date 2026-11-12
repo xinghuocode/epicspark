@@ -1,4 +1,4 @@
-﻿// 场景生成调试录制：每轮生成把「剧情推理/输出/详细描述 + 灰盒规划截图 + 拼装截图」落到磁盘。
+// 场景生成调试录制：每轮生成把「剧情推理/输出/详细描述 + 灰盒规划截图 + 拼装截图」落到磁盘。
 // 目录：<persistentDataPath>/EpicSpark/debug/<时间戳>_<sceneId>/
 using System;
 using System.Globalization;
@@ -102,6 +102,12 @@ namespace EpicSpark.Debugging
             sb.AppendLine("题目: " + spec.sceneName);
             sb.AppendLine("布局文本长度: " + (spec.layoutDescription == null ? 0 : spec.layoutDescription.Length));
             sb.AppendLine("叙述长度: " + (narrative == null ? 0 : narrative.Length));
+            if (story != null)
+            {
+                sb.AppendLine("内容来源: " + (story.LastContentSource ?? ""));
+                if (!string.IsNullOrEmpty(story.LastFallbackReason))
+                    sb.AppendLine("兜底原因: " + story.LastFallbackReason);
+            }
             WriteText(dir, "00_概要.txt", sb.ToString());
         }
 
@@ -178,9 +184,9 @@ namespace EpicSpark.Debugging
                 cam.clearFlags = CameraClearFlags.SolidColor;
                 cam.backgroundColor = new Color(0.10f, 0.11f, 0.14f, 1f);
                 cam.nearClipPlane = 0.5f;
-                cam.farClipPlane = 600f;
+                cam.farClipPlane = Mathf.Max(600f, size * 2f + 240f);
                 cam.cullingMask = ~0;
-                cam.transform.position = new Vector3(center.x, center.y + 120f, center.z);
+                cam.transform.position = new Vector3(center.x, center.y + Mathf.Max(120f, size * 0.6f + 100f), center.z);
                 cam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
                 cam.enabled = false;
 

@@ -159,6 +159,12 @@ namespace EpicSpark.Core
             TotalMinutes = minutes < 0 ? 0 : minutes;
         }
 
+        /// <summary>新一幕校正历史起点，但保留当前剧情已经经过的时间。</summary>
+        public static void Rebase(int baseYear)
+        {
+            BaseYear = baseYear;
+        }
+
         /// <summary>解析 "10d" / "2h" / "5min" / "1y" 并推进时间；无法解析返回 false。</summary>
         public static bool AddDelta(string delta)
         {
@@ -201,12 +207,15 @@ namespace EpicSpark.Core
             get { return BaseYear + (int)(TotalMinutes / MinutesPerYear); }
         }
 
-        /// <summary>形如「1793年7月14日 08:30」。</summary>
+        /// <summary>公元后显示正年份，公元前显示「公元前 N 年」，未知年代不伪造为 1789。</summary>
         public static string Display()
         {
             long remainder = TotalMinutes % MinutesPerYear;
             int day = (int)(remainder / MinutesPerDay) + 1;
             int minuteOfDay = (int)(remainder % MinutesPerDay);
+            if (BaseYear == 0)
+                return string.Format(CultureInfo.InvariantCulture, "未知年代 · 第{0}天 {1:00}:{2:00}",
+                    day, minuteOfDay / 60, minuteOfDay % 60);
             int month = 1, dayOfMonth = day;
             int[] monthDays = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
             for (int m = 0; m < 12; m++)
@@ -214,8 +223,11 @@ namespace EpicSpark.Core
                 if (dayOfMonth <= monthDays[m]) { month = m + 1; break; }
                 dayOfMonth -= monthDays[m];
             }
-            return string.Format(CultureInfo.InvariantCulture, "{0}年{1}月{2}日 {3:00}:{4:00}",
-                CurrentYear, month, dayOfMonth, minuteOfDay / 60, minuteOfDay % 60);
+            string year = CurrentYear < 0
+                ? "公元前" + (-CurrentYear).ToString(CultureInfo.InvariantCulture) + "年"
+                : CurrentYear.ToString(CultureInfo.InvariantCulture) + "年";
+            return string.Format(CultureInfo.InvariantCulture, "{0}{1}月{2}日 {3:00}:{4:00}",
+                year, month, dayOfMonth, minuteOfDay / 60, minuteOfDay % 60);
         }
     }
 }

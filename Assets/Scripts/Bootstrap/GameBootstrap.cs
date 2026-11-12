@@ -1,4 +1,4 @@
-﻿// 启动与装配：把四层 Agent、知识库、模型库、玩家、HUD、锚点路由器全部接起来。
+// 启动与装配：把四层 Agent、知识库、模型库、玩家、HUD、锚点路由器全部接起来。
 // 无 API Key 时一切走确定性兜底，游戏仍可完整游玩（离线模式）。
 using System;
 using System.Collections.Generic;
@@ -48,6 +48,12 @@ namespace EpicSpark.Bootstrap
         private const string TestAutoStartKey = "EpicSpark.TestAutoStart";
         private const string TestAutoStartEventKey = "EpicSpark.TestAutoStartEvent";
 
+        /// <summary>神殿开始场景写入的启动参数：待开局的历史事件 / 是否继续存档。读取后立即删除。</summary>
+        public const string BootEventKey = "EpicSpark.BootEvent";
+        public const string BootResumeKey = "EpicSpark.BootResume";
+        /// <summary>星火神殿设置页里调整的生成容忍度；开局时同步到 initialTolerance。</summary>
+        public const string BootToleranceKey = "EpicSpark.BootTolerance";
+
         private GameDirector _director;
         private NpcDialogueService _dialogue;
         private KnowledgeService _knowledge;
@@ -87,6 +93,11 @@ namespace EpicSpark.Bootstrap
         {
             if (UnityEngine.Object.FindObjectOfType<GameBootstrap>() != null) return;
 
+            // 神殿开始场景（StarTempleStart / StartScene）自带菜单、相机、光照与玩家，
+            // 不需要 EpicSpark 引导对象，否则会多出一套标题界面与相机。
+            if (UnityEngine.Object.FindObjectOfType<SparkCode.StartMenuController>() != null) return;
+            if (UnityEngine.Object.FindObjectOfType<SparkCode.Gameplay.StarTempleWorldUiController>() != null) return;
+
             var go = new GameObject("EpicSpark (自动引导)");
             go.AddComponent<GameBootstrap>();
             EnsureFallbackCamera();
@@ -119,6 +130,10 @@ namespace EpicSpark.Bootstrap
             // 端点配置优先级：设置界面存进 PlayerPrefs 的值 > 环境变量 > Inspector 字段
             _config = ApiConfig.Load().WithInspectorDefaults(apiKey, baseUrl, chatModel, forceOffline);
 
+            // 星火神殿设置页里调到过容忍度时，开局沿用它。
+            if (PlayerPrefs.HasKey(BootToleranceKey))
+                initialTolerance = Mathf.Clamp01(PlayerPrefs.GetFloat(BootToleranceKey, initialTolerance));
+
             Application.targetFrameRate = 60;
             if (createLightingIfMissing) EnsureLighting();
             EnsureEnvironment();
@@ -134,7 +149,7 @@ namespace EpicSpark.Bootstrap
 
         // ─────────────────────────── 服务装配 ───────────────────────────
 
-        private async Task BuildServicesAsync()
+        private Task BuildServicesAsync()
         {
             ApiConfig cfg = Config;
             string resolvedKey = cfg.apiKey ?? "";
@@ -169,28 +184,12 @@ namespace EpicSpark.Bootstrap
             _knowledge = new KnowledgeService(_knowledgeSettings);
             Services.Knowledge = _knowledge;
 
-            // 模型库（43 个美术资产 + Qwen3-Embedding 向量）
-            ModelCatalog.VerboseMatching = PlayerPrefs.GetInt("EpicSpark.VerboseMatching", 0) == 1;
-            _catalog = new ModelCatalog();
-            Services.Catalog = _catalog;
-            try { await _catalog.LoadAsync(_cts.Token); }
-            catch (Exception e) { Debug.LogWarning("[启动] 模型库加载失败: " + e.Message); }
-
-            // 资产生成 Agent
-            try
-            {
-                _assetSettings = AssetGenSettings.LoadOrCreate();
-                _assetSettings.baseUrl = resolvedUrl;
-                _assetSettings.apiKey = resolvedKey;
-                _assetSettings.textToImageModel = cfg.ResolvedImageModel;
-                _assetSettings.imageTo3DModel = cfg.Resolved3DModel;
-                var writer = new RuntimeLibraryWriter();
-                Services.AssetGenerator = new GiteeAssetGenerator(_catalog, _assetSettings, writer);
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[启动] 资产生成 Agent 装配失败: " + e.Message);
-            }
+            // 当前为强制素模阶段：不创建/加载模型库，不装配资产生成服务，也不读取旧运行时资产目录。
+            _catalog = null;
+            _assetSettings = null;
+            Services.Catalog = null;
+            Services.AssetGenerator = null;
+            Debug.Log("[启动] 美术资产库与资产生成已禁用；场景搭建只使用 PrimitiveKit 简单几何体。");
 
             // 四层 Agent
             Services.Story = new StoryAgent(_llm);
@@ -206,17 +205,18 @@ namespace EpicSpark.Bootstrap
 
             // 预热知识库（不阻塞启动，失败不影响游玩）
             _ = WarmupKnowledgeAsync();
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// 给两个"会思考很久"的 Agent 分配时间预算：
-        /// 剧情是核心，吃满设置里的请求超时；灰盒只是空间编排，最多给三分之一，
-        /// 超时后它们各自回落到确定性实现，所以耐心上限是可控的。
+        /// 剧情吃满设置里的请求超时；灰盒不限时（推理模型单轮可能要 1–3 分钟），
+        /// 只受取消令牌与 HTTP 超时约束。异常/失败时仍会回落到确定性实现。
         /// </summary>
         private void ApplyAgentBudgets(ApiConfig cfg)
         {
             int story = cfg != null ? cfg.ResolvedTimeoutSeconds : ApiConfig.DefaultTimeoutSeconds;
-            int graybox = Mathf.Clamp(story / 3, 20, 45);
+            int graybox = 0;   // 0 = 灰盒不限时（推理模型单轮 60–120 秒很正常，到点就砍只会白等）
 
             _storyBudget = story;
             _grayboxBudget = graybox;
@@ -347,7 +347,7 @@ namespace EpicSpark.Bootstrap
                 return;
             }
 
-            EnterPlayUi("WASD 移动 · E 互动/传送 · 左键攻击 · F 对话 · Tab 调整容忍度");
+            EnterPlayUi("WASD 移动 · Q 奔跑 · E 呼出/锁定鼠标 · 空格跳跃 · 左键攻击 · 右键交互/对话 · Tab 调整容忍度");
         }
 
         private async void OnResumeRequested()
@@ -477,6 +477,25 @@ namespace EpicSpark.Bootstrap
 
         private void ShowTitle()
         {
+            // 从神殿开始场景（StartScene）进入：直接开局 / 读档，不再显示旧的标题界面。
+            if (PlayerPrefs.GetInt(BootResumeKey, 0) == 1)
+            {
+                PlayerPrefs.DeleteKey(BootResumeKey);
+                PlayerPrefs.DeleteKey(BootEventKey);
+                Debug.Log("[启动] 从神殿开始场景进入：继续上次存档");
+                OnResumeRequested();
+                return;
+            }
+            string bootEvent = PlayerPrefs.GetString(BootEventKey, "");
+            if (!string.IsNullOrEmpty(bootEvent))
+            {
+                PlayerPrefs.DeleteKey(BootEventKey);
+                PlayerPrefs.DeleteKey(BootResumeKey);
+                Debug.Log("[启动] 从神殿开始场景进入：" + bootEvent);
+                OnStartRequested(bootEvent);
+                return;
+            }
+
             bool remote = Services.Llm != null && Services.Llm.HasRemote;
             string status = remote
                 ? "远端模型已连接，将由四层 Agent 实时生成场景。"
@@ -561,6 +580,7 @@ namespace EpicSpark.Bootstrap
                 Debug.Log("[调试] 录制开关 = " + (next ? "开" : "关")
                           + " · 目录: " + EpicSpark.Debugging.SceneDebugRecorder.PersistentRoot());
             }
+
             TickBusyTicker();
         }
 
@@ -592,7 +612,7 @@ namespace EpicSpark.Bootstrap
             if (current == null) return;
             ApiConfig cfg = Config;
             string hint = cfg.RemoteActive
-                ? "远端模型 " + cfg.ResolvedChatModel + " · 剧情≤" + _storyBudget + "s / 灰盒≤" + _grayboxBudget + "s，超时自动本地兜底"
+                ? "远端模型 " + cfg.ResolvedChatModel + " · 剧情≤" + _storyBudget + "s / 灰盒不限时（推理模型 1–3 分钟），超时自动本地兜底"
                 : "本地确定性模式";
             current.SetSubText("已等待 " + Mathf.FloorToInt(_busySeconds) + " 秒 · " + hint);
         }

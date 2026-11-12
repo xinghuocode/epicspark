@@ -1,9 +1,17 @@
-// 真实资产生成链路：z-image-turbo 文生图 → RMBG-2.0 背景透明化 → Hunyuan3D-2 图生 3D。
-// 设计文档：搭建 Agent 把提示词交给本链路；不做抠图时 Hunyuan3D-2 往往只会生成一个方盒。
-// 约束：
-//   · 只用 UnityEngine + UnityWebRequest，不用 HttpClient / Newtonsoft / System.Text.Json；
-//   · JSON 用 JsonUtility（对象根）或手写拼接，响应里字段名变化用字符扫描兜底；
-//   · 单步失败返回明确 error/stage，绝不让异常穿透到搭建 Agent。
+// 资产生成 Agent 的真实链路（移植自工程内可工作的 wtz 场景 Agent 测试床）：
+//   Z-Image-Turbo 文生图 → RMBG-2.0 背景透明化 → Hunyuan3D-2 单图生 3D → GLB 落盘。
+//
+// 与旧实现的差异（旧链路在 gitee 上跑不通，已实测）：
+//   · 抠图端点：/images/background/removal（404）→ /images/mattings（multipart，200）
+//   · 图生 3D：/3d/generations（404）→ /async/image-to-3d（multipart 提交异步任务）
+//   · 轮询：提交 URL + /{id}（404）→ /task/{task_id}（200），5 秒一次、最长 15 分钟
+//   · multipart 与文件下载走手写 TCP+TLS（百度 BOS 强制要求 Date 头，UnityWebRequest 会丢）
+//   · JSON 用工程内 MiniJson 解析（data[0].b64_json / output.file_url 等嵌套结构）
+//
+// 约束保持不变：
+//   · baseUrl / apiKey 未配置时绝不发请求，上层走确定性兜底；
+//   · 单步失败返回明确 stage/error，异常不穿透到搭建 Agent；
+//   · 抠图失败自动改用原图继续（Hunyuan3D 内部会再做 rembg）。
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -12,7 +20,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Networking;
 
 namespace EpicSpark.AssetGen
 {
@@ -31,6 +38,13 @@ namespace EpicSpark.AssetGen
     /// <summary>三段式资产生成管线（可单独调用，方便在编辑器里逐步调试）。</summary>
     public sealed class AssetGenPipeline
     {
+        // 与测试床一致的实测参数：文生图 8 步；Hunyuan3D 5 步 / octree 128 / guidance 5。
+        private const int TextToImageSteps = 8;
+        private const int ImageTo3DSteps = 5;
+        private const int OctreeResolution = 128;
+        private const float GuidanceScale = 5f;
+        private const int Seed = 1234;
+
         private readonly AssetGenSettings settings;
 
         public AssetGenPipeline(AssetGenSettings settings)
@@ -55,7 +69,7 @@ namespace EpicSpark.AssetGen
             }
 
             string imagePrompt = settings.BuildImagePrompt(prompt);
-            Debug.Log("[资产生成] 开始远端链路：" + imagePrompt);
+            Debug.Log("[资产生成] 远端链路开始：" + imagePrompt);
 
             // ── 1) 文生图 ──
             byte[] opaqueBytes;
@@ -81,6 +95,7 @@ namespace EpicSpark.AssetGen
                 Debug.LogWarning("[资产生成] " + result.error);
                 return result;
             }
+            Debug.Log("[资产生成] 文生图完成：" + (opaqueBytes.Length / 1024) + " KB");
 
             // ── 2) RMBG-2.0 抠图（失败降级用原图，但会警告可能生成方盒）──
             byte[] transparentBytes = opaqueBytes;
@@ -99,7 +114,6 @@ namespace EpicSpark.AssetGen
                 catch (Exception e)
                 {
                     result.warnings.Add("RMBG 抠图失败，使用原图继续（Hunyuan3D 可能只生成方盒）: " + e.Message);
-                    Debug.LogWarning("[资产生成] " + result.warnings[result.warnings.Count - 1]);
                 }
             }
 
@@ -137,80 +151,123 @@ namespace EpicSpark.AssetGen
             return result;
         }
 
-        // ─────────────────────────── 单步 ───────────────────────────
+        // ─────────────────────────── 1) 文生图 ───────────────────────────
 
-        /// <summary>z-image-turbo 文生图，返回图片字节（b64_json 优先，url 次之）。</summary>
+        /// <summary>Z-Image-Turbo 文生图，返回图片字节（b64_json 优先，url 次之）。</summary>
         public async Task<byte[]> TextToImageAsync(string prompt, CancellationToken ct)
         {
             string url = settings.ResolveUrl(settings.textToImagePath);
-            var body = new StringBuilder(512);
-            body.Append('{');
-            body.Append("\"model\":\"").Append(AssetGenJson.Escape(settings.textToImageModel)).Append("\",");
-            body.Append("\"prompt\":\"").Append(AssetGenJson.Escape(prompt)).Append("\",");
-            body.Append("\"n\":1,");
-            body.Append("\"size\":\"").Append(settings.imageSize.ToString(CultureInfo.InvariantCulture)).Append('x')
-                .Append(settings.imageSize.ToString(CultureInfo.InvariantCulture)).Append("\",");
-            body.Append("\"response_format\":\"b64_json\"");
-            body.Append('}');
+            string size = settings.imageSize.ToString(CultureInfo.InvariantCulture) + "x"
+                          + settings.imageSize.ToString(CultureInfo.InvariantCulture);
 
-            string response = await AssetGenHttp.PostJsonAsync(url, settings.apiKey, body.ToString(), settings.requestTimeoutSeconds, ct);
-            string remoteUrl;
-            byte[] bytes = ParseImageBytes(response, out remoteUrl);
+            string body = MiniJson.Serialize(new Dictionary<string, object>
+            {
+                ["model"] = settings.textToImageModel,
+                ["prompt"] = prompt,
+                ["size"] = size,
+                ["num_inference_steps"] = TextToImageSteps,
+                ["response_format"] = "b64_json",
+            });
+
+            string response = await AssetGenHttp.PostJsonAsync(url, settings.apiKey, body, settings.requestTimeoutSeconds, ct);
+            byte[] bytes = await ExtractImageFromJsonAsync(response, ct);
             if (bytes != null && bytes.Length > 0) return bytes;
-            if (!string.IsNullOrEmpty(remoteUrl))
-                return await AssetGenHttp.GetBytesAsync(remoteUrl, settings.apiKey, settings.requestTimeoutSeconds, ct);
-            throw new IOException("文生图响应里既没有 b64_json 也没有 url: " + AssetGenJson.Truncate(response, 240));
+            throw new IOException("文生图响应里没有图片数据: " + Truncate(response, 240));
         }
 
-        /// <summary>RMBG-2.0 背景透明化，返回透明 PNG 字节。</summary>
+        // ─────────────────────────── 2) RMBG-2.0 抠图 ───────────────────────────
+
+        /// <summary>
+        /// RMBG-2.0 背景透明化，返回透明 PNG 字节。
+        /// 端点按 settings 走 multipart；失败自动尝试兼容端点，仍失败由调用方降级用原图。
+        /// </summary>
         public async Task<byte[]> RemoveBackgroundAsync(byte[] png, CancellationToken ct)
         {
             if (png == null || png.Length == 0) throw new IOException("抠图输入为空。");
-            string url = settings.ResolveUrl(settings.backgroundRemovalPath);
-            var body = new StringBuilder(png.Length * 2 + 256);
-            body.Append('{');
-            body.Append("\"model\":\"").Append(AssetGenJson.Escape(settings.backgroundRemovalModel)).Append("\",");
-            body.Append("\"image\":\"data:image/png;base64,").Append(Convert.ToBase64String(png)).Append("\"");
-            body.Append('}');
 
-            string response = await AssetGenHttp.PostJsonAsync(url, settings.apiKey, body.ToString(), settings.requestTimeoutSeconds, ct);
-            string remoteUrl;
-            byte[] bytes = ParseImageBytes(response, out remoteUrl);
-            if (bytes != null && bytes.Length > 0) return bytes;
-            if (!string.IsNullOrEmpty(remoteUrl))
-                return await AssetGenHttp.GetBytesAsync(remoteUrl, settings.apiKey, settings.requestTimeoutSeconds, ct);
-            throw new IOException("抠图响应里没有图片数据: " + AssetGenJson.Truncate(response, 240));
+            var paths = new List<string>();
+            if (!string.IsNullOrEmpty(settings.backgroundRemovalPath)) paths.Add(settings.backgroundRemovalPath);
+            if (!string.IsNullOrEmpty(settings.backgroundRemovalFallbackPath)
+                && !string.Equals(settings.backgroundRemovalPath, settings.backgroundRemovalFallbackPath, StringComparison.OrdinalIgnoreCase))
+            {
+                paths.Add(settings.backgroundRemovalFallbackPath);
+            }
+
+            var errors = new List<string>();
+            for (int i = 0; i < paths.Count; i++)
+            {
+                string url = settings.ResolveUrl(paths[i]);
+                var fields = new Dictionary<string, string>
+                {
+                    ["model"] = settings.backgroundRemovalModel,
+                    ["response_format"] = "b64_json",
+                };
+                try
+                {
+                    byte[] response = await AssetGenHttp.PostMultipartAsync(
+                        url, settings.apiKey, fields, png, "image", "image.png", "image/png",
+                        settings.requestTimeoutSeconds, ct);
+
+                    byte[] image = await ExtractImageFromBytesAsync(response, ct);
+                    if (image != null && image.Length > 0)
+                    {
+                        Debug.Log("[资产生成] 抠图完成：" + paths[i] + " → " + (image.Length / 1024) + " KB");
+                        return image;
+                    }
+                    errors.Add(paths[i] + " 响应里没有图片数据");
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    errors.Add(paths[i] + ": " + e.Message);
+                }
+            }
+            throw new IOException("RMBG-2.0 抠图失败（已尝试 " + string.Join(" / ", errors.ToArray()) + "）");
         }
+
+        // ─────────────────────────── 3) Hunyuan3D-2 图生 3D ───────────────────────────
 
         /// <summary>Hunyuan3D-2 提交 + 轮询 + 下载，返回本地 glb 绝对路径。</summary>
         public async Task<string> ImageTo3DAsync(byte[] png, string category, CancellationToken ct)
         {
             if (png == null || png.Length == 0) throw new IOException("图生 3D 输入为空。");
+
             string submitUrl = settings.ResolveUrl(settings.imageTo3DPath);
-            var body = new StringBuilder(png.Length * 2 + 256);
-            body.Append('{');
-            body.Append("\"model\":\"").Append(AssetGenJson.Escape(settings.imageTo3DModel)).Append("\",");
-            body.Append("\"image\":\"data:image/png;base64,").Append(Convert.ToBase64String(png)).Append("\",");
-            body.Append("\"texture\":\"auto\",");
-            body.Append("\"num_inference_steps\":50");
-            body.Append('}');
+            var fields = new Dictionary<string, string>
+            {
+                ["type"] = "glb",
+                ["model"] = settings.imageTo3DModel,
+                ["texture"] = "true",
+                ["seed"] = Seed.ToString(CultureInfo.InvariantCulture),
+                ["num_inference_steps"] = ImageTo3DSteps.ToString(CultureInfo.InvariantCulture),
+                ["octree_resolution"] = OctreeResolution.ToString(CultureInfo.InvariantCulture),
+                ["guidance_scale"] = GuidanceScale.ToString("0.###", CultureInfo.InvariantCulture),
+            };
 
-            string submit = await AssetGenHttp.PostJsonAsync(submitUrl, settings.apiKey, body.ToString(), settings.requestTimeoutSeconds, ct);
+            Debug.Log("[资产生成] 提交图生 3D 任务…");
+            byte[] submitBytes = await AssetGenHttp.PostMultipartAsync(
+                submitUrl, settings.apiKey, fields, png, "image", "image.png", "image/png",
+                settings.requestTimeoutSeconds, ct);
+            string submit = DecodeText(submitBytes);
 
-            // 有些部署会同步直接给文件地址
-            string direct = AssetGenJson.ExtractString(submit, "file_url");
-            if (string.IsNullOrEmpty(direct)) direct = AssetGenJson.ExtractString(submit, "glb_url");
-            if (string.IsNullOrEmpty(direct)) direct = AssetGenJson.ExtractString(submit, "model_url");
-            if (!string.IsNullOrEmpty(direct)) return await DownloadGlbAsync(direct, ct);
+            Dictionary<string, object> submitRoot = TryParseObject(submit);
+            string directUrl = FindFileUrl(submitRoot);
+            if (!string.IsNullOrEmpty(directUrl)) return await DownloadGlbAsync(directUrl, ct);
 
-            string taskId = AssetGenJson.ExtractIdentifier(submit);
+            string taskId = FindTaskId(submitRoot);
             if (string.IsNullOrEmpty(taskId))
-                throw new IOException("图生 3D 提交响应里没有任务 id: " + AssetGenJson.Truncate(submit, 240));
+                throw new IOException("图生 3D 提交响应里没有 task_id: " + Truncate(submit, 240));
 
-            string pollUrl = submitUrl + "/" + Uri.EscapeDataString(taskId);
+            Debug.Log("[资产生成] 3D 任务已提交: " + taskId + "，开始轮询 " + settings.taskPath);
+            string pollUrl = settings.ResolveUrl(settings.taskPath) + Uri.EscapeDataString(taskId);
             int interval = Mathf.Max(1, settings.pollIntervalSeconds);
-            int waited = 0;
             int timeout = Mathf.Max(interval, settings.pollTimeoutSeconds);
+            int waited = 0;
+            string lastStatus = "";
+
             while (waited < timeout)
             {
                 ct.ThrowIfCancellationRequested();
@@ -218,76 +275,271 @@ namespace EpicSpark.AssetGen
                 waited += interval;
 
                 string poll = await AssetGenHttp.GetTextAsync(pollUrl, settings.apiKey, settings.requestTimeoutSeconds, ct);
-                string status = AssetGenJson.ExtractString(poll, "status");
-                if (string.IsNullOrEmpty(status)) status = AssetGenJson.ExtractString(poll, "task_status");
-                if (string.IsNullOrEmpty(status)) status = AssetGenJson.ExtractString(poll, "state");
+                Dictionary<string, object> statusRoot = TryParseObject(poll);
+                string status = FindStatus(statusRoot);
+                lastStatus = status;
 
-                string fileUrl = AssetGenJson.ExtractString(poll, "file_url");
-                if (string.IsNullOrEmpty(fileUrl)) fileUrl = AssetGenJson.ExtractString(poll, "glb_url");
-                if (string.IsNullOrEmpty(fileUrl)) fileUrl = AssetGenJson.ExtractString(poll, "model_url");
-                if (string.IsNullOrEmpty(fileUrl)) fileUrl = AssetGenJson.ExtractString(poll, "url");
-                if (!string.IsNullOrEmpty(fileUrl) && LooksLikeModelUrl(fileUrl))
+                string fileUrl = FindFileUrl(statusRoot);
+                if (!string.IsNullOrEmpty(fileUrl) && (string.IsNullOrEmpty(status) || IsFinishedStatus(status)))
                     return await DownloadGlbAsync(fileUrl, ct);
 
-                if (AssetGenJson.IsFailureStatus(status))
-                    throw new IOException("Hunyuan3D 任务失败，状态=" + status + " | " + AssetGenJson.Truncate(poll, 160));
-                if (AssetGenJson.IsFinishedStatus(status) && string.IsNullOrEmpty(fileUrl))
-                    throw new IOException("Hunyuan3D 任务已完成但没有文件地址: " + AssetGenJson.Truncate(poll, 240));
+                if (IsFailureStatus(status))
+                    throw new IOException("Hunyuan3D 任务失败，状态=" + status + " | " + Truncate(poll, 200));
+
+                if (IsFinishedStatus(status) && string.IsNullOrEmpty(fileUrl))
+                    throw new IOException("Hunyuan3D 任务已完成但没有文件地址: " + Truncate(poll, 240));
+
+                Debug.Log("[资产生成] 3D 任务 " + taskId + " 状态=" + (string.IsNullOrEmpty(status) ? "(未知)" : status)
+                          + "，已等待 " + waited + "s");
             }
-            throw new TimeoutException("Hunyuan3D 任务轮询超时（" + timeout + " 秒，任务 " + taskId + "）。");
+            throw new TimeoutException("Hunyuan3D 任务轮询超时（" + timeout + " 秒，任务 " + taskId
+                                      + "，最后状态 " + lastStatus + "）。");
         }
 
         private async Task<string> DownloadGlbAsync(string url, CancellationToken ct)
         {
-            byte[] bytes = await AssetGenHttp.GetBytesAsync(url, settings.apiKey, settings.requestTimeoutSeconds, ct);
+            int timeout = Mathf.Max(60, settings.requestTimeoutSeconds);
+            byte[] bytes = await AssetGenHttp.GetBytesAsync(url, settings.apiKey, settings.baseUrl, timeout, ct);
             if (bytes == null || bytes.Length == 0) throw new IOException("3D 文件下载为空: " + url);
+            if (!HasGlbMagic(bytes))
+                throw new IOException("下载内容不是 GLB（前 4 字节 " + DescribeMagic(bytes) + "）: " + Truncate(url, 120));
+
             string directory = Path.Combine(Application.persistentDataPath, "EpicSpark", "generated");
             Directory.CreateDirectory(directory);
             string fileName = "gen_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff", CultureInfo.InvariantCulture) + ".glb";
             string path = Path.Combine(directory, fileName);
             File.WriteAllBytes(path, bytes);
+            Debug.Log("[资产生成] GLB 已保存：" + path + "（" + (bytes.Length / 1024) + " KB）");
             return path;
-        }
-
-        private static bool LooksLikeModelUrl(string url)
-        {
-            if (string.IsNullOrEmpty(url)) return false;
-            string lower = url.ToLowerInvariant();
-            return lower.EndsWith(".glb") || lower.EndsWith(".gltf") || lower.EndsWith(".zip")
-                || lower.Contains("/file") || lower.Contains("download") || lower.Contains("model");
         }
 
         // ─────────────────────────── 响应解析 ───────────────────────────
 
-        private static byte[] ParseImageBytes(string json, out string remoteUrl)
+        private static bool HasGlbMagic(byte[] bytes)
         {
-            remoteUrl = string.Empty;
-            if (string.IsNullOrEmpty(json)) return null;
+            return bytes != null && bytes.Length >= 4
+                && bytes[0] == (byte)'g' && bytes[1] == (byte)'l'
+                && bytes[2] == (byte)'T' && bytes[3] == (byte)'F';
+        }
 
-            string[] base64Fields = { "b64_json", "base64", "image_base64", "image", "output", "data" };
+        private static string DescribeMagic(byte[] bytes)
+        {
+            if (bytes == null || bytes.Length < 4) return "(长度不足)";
+            var builder = new StringBuilder(8);
+            for (int i = 0; i < 4; i++)
+            {
+                byte b = bytes[i];
+                builder.Append(b >= 32 && b < 127 ? ((char)b).ToString() : ("0x" + b.ToString("x2", CultureInfo.InvariantCulture)));
+            }
+            return builder.ToString();
+        }
+
+        private static string DecodeText(byte[] bytes)
+        {
+            if (bytes == null || bytes.Length == 0) return string.Empty;
+            return Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF', ' ', '\r', '\n', '\t');
+        }
+
+        private static Dictionary<string, object> TryParseObject(string json)
+        {
+            if (string.IsNullOrEmpty(json)) return null;
+            try
+            {
+                return MiniJson.AsDict(MiniJson.Parse(json));
+            }
+            catch (FormatException e)
+            {
+                Debug.LogWarning("[资产生成] JSON 解析失败: " + e.Message + " | " + Truncate(json, 160));
+                return null;
+            }
+        }
+
+        /// <summary>从 JSON 文本里取图片：data[0].b64_json / data[0].url / image / images[] / 顶层 url。</summary>
+        private static async Task<byte[]> ExtractImageFromJsonAsync(string json, CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(json)) return null;
+            Dictionary<string, object> root = TryParseObject(json.TrimStart());
+            if (root != null)
+            {
+                List<object> data = MiniJson.GetList(root, "data");
+                if (data != null && data.Count > 0)
+                {
+                    byte[] image = await DecodeImageNodeAsync(MiniJson.AsDict(data[0]), ct);
+                    if (image != null) return image;
+                }
+
+                byte[] direct = await DecodeImageNodeAsync(root, ct);
+                if (direct != null) return direct;
+
+                List<object> images = MiniJson.GetList(root, "images");
+                if (images != null && images.Count > 0 && images[0] is string first)
+                {
+                    byte[] decoded = AssetGenText.TryDecodeBase64(first);
+                    if (decoded != null) return decoded;
+                }
+            }
+
+            // 兜底：响应不是标准结构时，按字段名扫描（b64 或 url）。
+            byte[] scanned = AssetGenText.ScanImageField(json);
+            if (scanned != null) return scanned;
+            string scannedUrl = AssetGenText.ScanUrlField(json);
+            if (!string.IsNullOrEmpty(scannedUrl)) return await DownloadBytesAsync(scannedUrl, ct);
+            return null;
+        }
+
+        /// <summary>抠图响应可能是 JSON，也可能是直接返回的 PNG/JPEG 二进制。</summary>
+        private static async Task<byte[]> ExtractImageFromBytesAsync(byte[] response, CancellationToken ct)
+        {
+            if (response == null || response.Length == 0) return null;
+            if (IsPng(response) || IsJpeg(response)) return response;
+            string text = DecodeText(response);
+            if (text.StartsWith("{")) return await ExtractImageFromJsonAsync(text, ct);
+            if (text.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || text.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return await DownloadBytesAsync(text.Trim(), ct);
+            }
+            return null;
+        }
+
+        private static async Task<byte[]> DecodeImageNodeAsync(Dictionary<string, object> node, CancellationToken ct)
+        {
+            if (node == null) return null;
+
+            string[] base64Fields = { "b64_json", "base64", "image_base64", "image", "output", "result" };
             for (int i = 0; i < base64Fields.Length; i++)
             {
-                string value = AssetGenJson.ExtractString(json, base64Fields[i]);
-                if (string.IsNullOrEmpty(value)) continue;
-                byte[] decoded = AssetGenJson.TryDecodeBase64(value);
+                object value;
+                if (!MiniJson.TryGet(node, base64Fields[i], out value)) continue;
+                string text = value as string;
+                if (string.IsNullOrEmpty(text)) continue;
+                byte[] decoded = AssetGenText.TryDecodeBase64(text);
                 if (decoded != null && decoded.Length > 0) return decoded;
+                if (text.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                    || text.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    return await DownloadBytesAsync(text, ct);
+                }
             }
 
             string[] urlFields = { "url", "image_url", "file_url", "output_url", "result_url" };
             for (int i = 0; i < urlFields.Length; i++)
             {
-                string value = AssetGenJson.ExtractString(json, urlFields[i]);
-                if (!string.IsNullOrEmpty(value) && (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                    || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
+                string url = MiniJson.GetString(node, urlFields[i]);
+                if (!string.IsNullOrEmpty(url)) return await DownloadBytesAsync(url, ct);
+            }
+            return null;
+        }
+
+        private static async Task<byte[]> DownloadBytesAsync(string url, CancellationToken ct)
+        {
+            // 图像下载不强依赖 Date 头，但复用同一传输层（统一走手写报文）。
+            return await AssetGenHttp.GetBytesAsync(url, string.Empty, string.Empty, 180, ct);
+        }
+
+        private static string FindTaskId(Dictionary<string, object> root)
+        {
+            if (root == null) return null;
+            string[] fields = { "task_id", "taskId", "id", "request_id", "requestId", "job_id", "jobId" };
+            for (int i = 0; i < fields.Length; i++)
+            {
+                string value = MiniJson.GetString(root, fields[i]);
+                if (!string.IsNullOrEmpty(value)) return value;
+            }
+            Dictionary<string, object> data = MiniJson.GetDict(root, "data");
+            if (data != null)
+            {
+                for (int i = 0; i < fields.Length; i++)
                 {
-                    remoteUrl = value;
-                    break;
+                    string value = MiniJson.GetString(data, fields[i]);
+                    if (!string.IsNullOrEmpty(value)) return value;
+                }
+            }
+            Dictionary<string, object> task = MiniJson.GetDict(root, "task");
+            if (task != null)
+            {
+                string value = MiniJson.GetString(task, "id");
+                if (!string.IsNullOrEmpty(value)) return value;
+            }
+            return null;
+        }
+
+        private static string FindStatus(Dictionary<string, object> root)
+        {
+            if (root == null) return string.Empty;
+            string value = MiniJson.GetString(root, "status");
+            if (string.IsNullOrEmpty(value)) value = MiniJson.GetString(root, "state");
+            if (string.IsNullOrEmpty(value)) value = MiniJson.GetString(root, "task_status");
+            if (string.IsNullOrEmpty(value))
+            {
+                Dictionary<string, object> data = MiniJson.GetDict(root, "data");
+                if (data != null) value = MiniJson.GetString(data, "status");
+            }
+            return value ?? string.Empty;
+        }
+
+        private static string FindFileUrl(Dictionary<string, object> root)
+        {
+            if (root == null) return null;
+
+            string[] nestedKeys = { "output", "result", "data", "file" };
+            for (int i = 0; i < nestedKeys.Length; i++)
+            {
+                Dictionary<string, object> nested = MiniJson.GetDict(root, nestedKeys[i]);
+                if (nested == null) continue;
+                string url = FindFileUrlShallow(nested);
+                if (!string.IsNullOrEmpty(url)) return url;
+            }
+
+            return FindFileUrlShallow(root);
+        }
+
+        private static string FindFileUrlShallow(Dictionary<string, object> node)
+        {
+            if (node == null) return null;
+            string[] fields = { "file_url", "glb_url", "model_url", "output_url", "result_url", "url" };
+            for (int i = 0; i < fields.Length; i++)
+            {
+                string value = MiniJson.GetString(node, fields[i]);
+                if (!string.IsNullOrEmpty(value)
+                    && (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                        || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
+                {
+                    return value;
                 }
             }
             return null;
         }
 
-        private string SaveDebugImage(byte[] png, string tag)
+        private static bool IsFinishedStatus(string status)
+        {
+            if (string.IsNullOrEmpty(status)) return false;
+            string lower = status.ToLowerInvariant();
+            return lower.Contains("success") || lower.Contains("succeed") || lower.Contains("complet")
+                || lower.Contains("done") || lower.Contains("finish") || lower == "ok";
+        }
+
+        private static bool IsFailureStatus(string status)
+        {
+            if (string.IsNullOrEmpty(status)) return false;
+            string lower = status.ToLowerInvariant();
+            return lower.Contains("fail") || lower.Contains("error") || lower.Contains("cancel") || lower.Contains("reject");
+        }
+
+        private static bool IsPng(byte[] bytes)
+        {
+            return bytes != null && bytes.Length > 8
+                && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47;
+        }
+
+        private static bool IsJpeg(byte[] bytes)
+        {
+            return bytes != null && bytes.Length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8;
+        }
+
+        // ─────────────────────────── 落盘 ───────────────────────────
+
+        private static string SaveDebugImage(byte[] png, string tag)
         {
             if (png == null || png.Length == 0) return string.Empty;
             try
@@ -306,116 +558,47 @@ namespace EpicSpark.AssetGen
                 return string.Empty;
             }
         }
-    }
 
-    // ─────────────────────────── HTTP ───────────────────────────
-
-    /// <summary>UnityWebRequest 的 async 封装（Unity 2022 没有原生 awaitable，用 while(!op.isDone)+Task.Yield 等待）。</summary>
-    internal static class AssetGenHttp
-    {
-        public static async Task<string> PostJsonAsync(string url, string apiKey, string json, int timeoutSeconds, CancellationToken ct)
-        {
-            if (string.IsNullOrEmpty(url)) throw new InvalidOperationException("请求 URL 为空。");
-            byte[] payload = Encoding.UTF8.GetBytes(json ?? string.Empty);
-            using (var request = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
-            {
-                request.uploadHandler = new UploadHandlerRaw(payload);
-                request.downloadHandler = new DownloadHandlerBuffer();
-                request.timeout = Mathf.Max(5, timeoutSeconds);
-                request.SetRequestHeader("Content-Type", "application/json");
-                request.SetRequestHeader("Accept", "application/json");
-                if (!string.IsNullOrEmpty(apiKey)) request.SetRequestHeader("Authorization", "Bearer " + apiKey);
-
-                await SendAsync(request, ct);
-                string text = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
-                if (request.result != UnityWebRequest.Result.Success)
-                {
-                    throw new IOException("POST " + url + " 失败 HTTP " + (int)request.responseCode
-                        + " " + request.error + " | " + AssetGenJson.Truncate(text, 300));
-                }
-                return text;
-            }
-        }
-
-        public static async Task<string> GetTextAsync(string url, string apiKey, int timeoutSeconds, CancellationToken ct)
-        {
-            if (string.IsNullOrEmpty(url)) throw new InvalidOperationException("请求 URL 为空。");
-            using (var request = UnityWebRequest.Get(url))
-            {
-                request.downloadHandler = new DownloadHandlerBuffer();
-                request.timeout = Mathf.Max(5, timeoutSeconds);
-                if (!string.IsNullOrEmpty(apiKey)) request.SetRequestHeader("Authorization", "Bearer " + apiKey);
-
-                await SendAsync(request, ct);
-                string text = request.downloadHandler != null ? request.downloadHandler.text : string.Empty;
-                if (request.result != UnityWebRequest.Result.Success)
-                {
-                    throw new IOException("GET " + url + " 失败 HTTP " + (int)request.responseCode
-                        + " " + request.error + " | " + AssetGenJson.Truncate(text, 300));
-                }
-                return text;
-            }
-        }
-
-        public static async Task<byte[]> GetBytesAsync(string url, string apiKey, int timeoutSeconds, CancellationToken ct)
-        {
-            if (string.IsNullOrEmpty(url)) throw new InvalidOperationException("请求 URL 为空。");
-            using (var request = UnityWebRequest.Get(url))
-            {
-                request.downloadHandler = new DownloadHandlerBuffer();
-                request.timeout = Mathf.Max(5, timeoutSeconds);
-                if (!string.IsNullOrEmpty(apiKey)) request.SetRequestHeader("Authorization", "Bearer " + apiKey);
-
-                await SendAsync(request, ct);
-                if (request.result != UnityWebRequest.Result.Success)
-                {
-                    throw new IOException("下载 " + url + " 失败 HTTP " + (int)request.responseCode + " " + request.error);
-                }
-                return request.downloadHandler != null ? request.downloadHandler.data : null;
-            }
-        }
-
-        private static async Task SendAsync(UnityWebRequest request, CancellationToken ct)
-        {
-            UnityWebRequestAsyncOperation operation = request.SendWebRequest();
-            while (!operation.isDone)
-            {
-                if (ct.IsCancellationRequested)
-                {
-                    request.Abort();
-                    throw new OperationCanceledException(ct);
-                }
-                await Task.Yield();
-            }
-        }
-    }
-
-    // ─────────────────────────── JSON 辅助 ───────────────────────────
-
-    /// <summary>手写 JSON 的转义与「按字段名扫描取值」。JsonUtility 不支持顶层数组/字典，响应格式又可能变化，故需要它。</summary>
-    internal static class AssetGenJson
-    {
-        public static string Escape(string text)
+        private static string Truncate(string text, int maxLength)
         {
             if (string.IsNullOrEmpty(text)) return string.Empty;
-            var builder = new StringBuilder(text.Length + 8);
-            for (int i = 0; i < text.Length; i++)
+            string single = text.Replace('\n', ' ').Replace('\r', ' ');
+            return single.Length <= maxLength ? single : single.Substring(0, maxLength) + "…";
+        }
+    }
+
+    // ─────────────────────────── JSON 字段扫描兜底 ───────────────────────────
+
+    /// <summary>标准结构解析失败时的兜底：按字段名扫描原始 JSON 文本。</summary>
+    internal static class AssetGenText
+    {
+        public static byte[] ScanImageField(string json)
+        {
+            string[] fields = { "b64_json", "base64", "image_base64", "image" };
+            for (int i = 0; i < fields.Length; i++)
             {
-                char c = text[i];
-                switch (c)
+                string value = ExtractString(json, fields[i]);
+                if (string.IsNullOrEmpty(value)) continue;
+                byte[] decoded = TryDecodeBase64(value);
+                if (decoded != null && decoded.Length > 0) return decoded;
+            }
+            return null;
+        }
+
+        public static string ScanUrlField(string json)
+        {
+            string[] fields = { "url", "image_url", "file_url", "output_url", "result_url" };
+            for (int i = 0; i < fields.Length; i++)
+            {
+                string value = ExtractString(json, fields[i]);
+                if (string.IsNullOrEmpty(value)) continue;
+                if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                    || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
-                    case '"': builder.Append("\\\""); break;
-                    case '\\': builder.Append("\\\\"); break;
-                    case '\n': builder.Append("\\n"); break;
-                    case '\r': builder.Append("\\r"); break;
-                    case '\t': builder.Append("\\t"); break;
-                    default:
-                        if (c < 0x20) builder.Append("\\u").Append(((int)c).ToString("x4", CultureInfo.InvariantCulture));
-                        else builder.Append(c);
-                        break;
+                    return value;
                 }
             }
-            return builder.ToString();
+            return null;
         }
 
         /// <summary>扫描 JSON 里第一个 "field": "value" 并返回反转义后的字符串；找不到返回 null。</summary>
@@ -468,65 +651,23 @@ namespace EpicSpark.AssetGen
             return null;
         }
 
-        /// <summary>取任务 id：id / task_id / request_id 等常见字段。</summary>
-        public static string ExtractIdentifier(string json)
+        public static byte[] TryDecodeBase64(string value)
         {
-            string[] fields = { "id", "task_id", "taskId", "request_id", "requestId", "job_id", "jobId" };
-            for (int i = 0; i < fields.Length; i++)
-            {
-                string value = ExtractString(json, fields[i]);
-                if (!string.IsNullOrEmpty(value)) return value;
-            }
-            return null;
-        }
-
-        public static bool TryDecodeBase64(string value, out byte[] bytes)
-        {
-            bytes = null;
-            if (string.IsNullOrEmpty(value)) return false;
+            if (string.IsNullOrEmpty(value)) return null;
             string data = value.Trim();
             int comma = data.IndexOf(',');
             if (data.StartsWith("data:", StringComparison.OrdinalIgnoreCase) && comma > 0)
                 data = data.Substring(comma + 1);
             data = data.Replace("\r", string.Empty).Replace("\n", string.Empty).Replace(" ", string.Empty);
-            if (data.Length == 0) return false;
+            if (data.Length == 0) return null;
             try
             {
-                bytes = Convert.FromBase64String(data);
-                return true;
+                return Convert.FromBase64String(data);
             }
             catch (FormatException)
             {
-                return false;
+                return null;
             }
-        }
-
-        public static byte[] TryDecodeBase64(string value)
-        {
-            byte[] bytes;
-            return TryDecodeBase64(value, out bytes) ? bytes : null;
-        }
-
-        public static bool IsFailureStatus(string status)
-        {
-            if (string.IsNullOrEmpty(status)) return false;
-            string lower = status.ToLowerInvariant();
-            return lower.Contains("fail") || lower.Contains("error") || lower.Contains("cancel") || lower.Contains("reject");
-        }
-
-        public static bool IsFinishedStatus(string status)
-        {
-            if (string.IsNullOrEmpty(status)) return false;
-            string lower = status.ToLowerInvariant();
-            return lower.Contains("success") || lower.Contains("succeed") || lower.Contains("complete")
-                || lower.Contains("done") || lower.Contains("finish") || lower == "ok";
-        }
-
-        public static string Truncate(string text, int maxLength)
-        {
-            if (string.IsNullOrEmpty(text)) return string.Empty;
-            string single = text.Replace('\n', ' ').Replace('\r', ' ');
-            return single.Length <= maxLength ? single : single.Substring(0, maxLength) + "…";
         }
     }
 }

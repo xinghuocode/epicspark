@@ -1,4 +1,4 @@
-﻿// 把模型返回的 JSON 解析成 StoryTurn（JsonUtility 不支持顶层数组，所以统一要求 {"narrative":..,"scenes":[..]}）。
+// 把模型返回的 JSON 解析成 StoryTurn（JsonUtility 不支持顶层数组，所以统一要求 {"narrative":..,"scenes":[..]}）。
 // 解析失败返回 null + error 文本，调用方整体回退到确定性兜底。
 using System;
 using System.Collections.Generic;
@@ -34,10 +34,14 @@ namespace EpicSpark.Story
         public string buildRequirement;
         public float width;
         public float length;
+        /// <summary>剧情指定的起始年；公元前为负数，0 表示未知。</summary>
+        public int startYear;
         public StoryAnchorDto[] anchors;
         public StoryNpcDto[] npcs;
         public StoryPropDto[] props;
         public StoryFlowDto[] flow;
+        /// <summary>结构化布局（可选但强烈建议）：灰盒的直接施工图。</summary>
+        public StoryLayoutDto layoutSpec;
     }
 
     [Serializable]
@@ -53,6 +57,9 @@ namespace EpicSpark.Story
         public string targetSceneName;
         public string triggerKind;
         public string triggerEvent;
+        /// <summary>锚点载体的世界坐标（米）。</summary>
+        public float x;
+        public float z;
     }
 
     [Serializable]
@@ -64,6 +71,9 @@ namespace EpicSpark.Story
         public string persona;
         public string storyRole;
         public string heldTool;
+        /// <summary>NPC 出场坐标（米）。</summary>
+        public float x;
+        public float z;
     }
 
     [Serializable]
@@ -74,6 +84,9 @@ namespace EpicSpark.Story
         public string description;
         public string interactKind;
         public string effect;
+        /// <summary>道具坐标（米）。</summary>
+        public float x;
+        public float z;
     }
 
     [Serializable]
@@ -100,15 +113,30 @@ namespace EpicSpark.Story
     /// <summary>模型输出 → StoryTurn 的解析与清洗。</summary>
     public static class StoryJson
     {
+        /// <summary>最近一次成功解析是否经过 JsonRepair；用于内容来源追踪，不参与剧情数据本身。</summary>
+        public static bool LastUsedRepair { get; private set; }
+
         public static StoryTurn ParseTurn(string raw, out string error)
         {
             error = "";
+            LastUsedRepair = false;
             try
             {
                 string json = OpenAIText.ExtractJsonObject(raw);
+                if (string.IsNullOrEmpty(json) && !string.IsNullOrEmpty(raw) && raw.IndexOf('{') >= 0)
+                {
+                    // 括号不平衡时 ExtractJsonObject 会返回 null；先把原文交给修复器，
+                    // 不能直接以“没有 JSON 对象”为由丢弃已经接近完整的剧情。
+                    json = JsonRepair.Repair(raw);
+                    if (!string.IsNullOrEmpty(json))
+                    {
+                        LastUsedRepair = true;
+                        Debug.LogWarning("[Story] 原始输出括号未闭合，已先修复再提取剧情 JSON。");
+                    }
+                }
                 if (string.IsNullOrEmpty(json))
                 {
-                    error = "模型输出中没有 JSON 对象";
+                    error = "模型输出中没有可修复的 JSON 对象";
                     return null;
                 }
 
@@ -126,7 +154,10 @@ namespace EpicSpark.Story
                         try { dto = JsonUtility.FromJson<StoryTurnDto>(repaired); }
                         catch (Exception) { dto = null; }
                         if (dto != null && dto.scenes != null && dto.scenes.Length > 0)
+                        {
+                            LastUsedRepair = true;
                             Debug.LogWarning("[Story] 模型 JSON 有残缺，已自动修复并解析成功。");
+                        }
                     }
                 }
                 if (dto == null && !string.IsNullOrEmpty(firstError))
@@ -222,8 +253,9 @@ namespace EpicSpark.Story
                 layoutDescription = layout,
                 flowDescription = flow,
                 buildRequirement = Clean(dto.buildRequirement, 2000),
-                width = dto.width > 5f && dto.width < 500f ? dto.width : 60f,
-                length = dto.length > 5f && dto.length < 500f ? dto.length : 60f,
+                width = SceneSize.SideOrDefault(dto.width),
+                length = SceneSize.SideOrDefault(dto.length),
+                startYear = dto.startYear,
                 spawnPoint = new Vector3(0f, 1.2f, -24f),
                 isReused = false,
             };
@@ -263,6 +295,10 @@ namespace EpicSpark.Story
                     if (step != null) scene.flow.Add(step);
                 }
             }
+
+            // 结构化布局：剧情 Agent 直接给出的施工图。解析不出内容时为 null，
+            // 上层（StoryLayoutSpecBuilder）会退回「散文 → 编译器」路径。
+            scene.layoutSpec = StoryLayoutSpecJson.Convert(dto.layoutSpec, scene);
             return scene;
         }
 
@@ -286,6 +322,7 @@ namespace EpicSpark.Story
                 triggerKind = ParseTriggerKind(dto.triggerKind),
                 triggerEvent = Clean(dto.triggerEvent, 240),
             };
+            if (dto.x != 0f || dto.z != 0f) anchor.localPosition = new Vector3(dto.x, 0f, dto.z);
             if (string.IsNullOrEmpty(anchor.timeDelta) || !GameClock.TryParseDelta(anchor.timeDelta, out _))
                 anchor.timeDelta = "30min";
             return anchor;
@@ -307,6 +344,7 @@ namespace EpicSpark.Story
                 storyRole = Clean(dto.storyRole, 200),
                 heldTool = ParseToolKind(dto.heldTool),
                 maxHp = 100f,
+                localPosition = dto.x != 0f || dto.z != 0f ? new Vector3(dto.x, 0f, dto.z) : Vector3.zero,
             };
         }
 
@@ -325,6 +363,7 @@ namespace EpicSpark.Story
                 description = Clean(dto.description, 500),
                 interactKind = kind,
                 effect = Clean(dto.effect, 500),
+                localPosition = dto.x != 0f || dto.z != 0f ? new Vector3(dto.x, 0f, dto.z) : Vector3.zero,
             };
         }
 

@@ -1,4 +1,4 @@
-﻿// 灰盒规划的确定性兜底实现。
+// 灰盒规划的确定性兜底实现。
 // 设计文档：LLM 通过有限的灰盒编辑器 API 表达空间意图；远端不可用时必须仍能得到可用的灰盒骨架。
 // 本文件按 SceneSpec 的中文关键词判断场景类型（城镇/广场/乡村/港口/宫廷/战场/教堂/集市），
 // 用「网格 + 街道缝隙」的方式生成闭合、互不重叠、完全在场景边界内的功能区域，
@@ -216,6 +216,32 @@ namespace EpicSpark.Graybox
         // ─────────────────────────── 主入口 ───────────────────────────
 
         /// <summary>生成确定性灰盒规划。永远返回可用结果，不抛异常。</summary>
+        /// <summary>给槽位打流式加载分段号：60 米内第 0 段，60–120 第 1 段，以此类推。</summary>
+        public static void AssignStreamingSegments(GrayboxPlan plan)
+        {
+            if (plan == null || plan.slots == null) return;
+            // 素模阶段不流式：全部构件一次落地。
+            // 旧策略按"离出生点 60 米"切段，实测第一帧只搭了 30 个槽位里的 12 个
+            // （城堡/城门/教堂/菜市全在第 1 段），玩家一进场就是空场 → "零散"的主因之一。
+            if (EpicSparkFeatureFlags.UsePrimitiveScene)
+            {
+                for (int i = 0; i < plan.slots.Count; i++)
+                    if (plan.slots[i] != null) plan.slots[i].segment = 0;
+                plan.segmentCount = 1;
+                return;
+            }
+            int maxSegment = 0;
+            for (int i = 0; i < plan.slots.Count; i++)
+            {
+                GrayboxSlot slot = plan.slots[i];
+                if (slot == null) continue;
+                int segment = Mathf.FloorToInt(Vector2.Distance(slot.position, plan.spawnPoint) / 60f);
+                slot.segment = Mathf.Max(0, segment);
+                if (slot.segment > maxSegment) maxSegment = slot.segment;
+            }
+            plan.segmentCount = Mathf.Max(1, maxSegment + 1);
+        }
+
         public GrayboxPlan Plan(GrayboxRequest request)
         {
             SceneSpec scene = (request != null && request.scene != null) ? request.scene : new SceneSpec();
@@ -1359,8 +1385,13 @@ namespace EpicSpark.Graybox
                 if (slot == null) continue;
                 slot.position = ClampPoint(slot.position, halfW, halfL, 0.5f);
                 slot.rotation = Mathf.DeltaAngle(0f, SafeFloat(slot.rotation, 0f));
-                slot.sizeX = Mathf.Clamp(SafeFloat(slot.sizeX, 2f), 0.2f, 40f);
-                slot.sizeY = Mathf.Clamp(SafeFloat(slot.sizeY, 2f), 0.2f, 40f);
+                // 规格驱动时允许剧情给的真实体量（例如 50×35 的要塞），旧模式仍限制 40m 防巨型方块。
+                // 大场景按场景尺寸放宽，否则 200×200 里的 70m 集市棚会被削成 60m。
+                float maxSlotSize = plan.specDriven
+                    ? Mathf.Clamp(Mathf.Max(60f, Mathf.Max(plan.width, plan.length) * 0.9f), 60f, 180f)
+                    : 40f;
+                slot.sizeX = Mathf.Clamp(SafeFloat(slot.sizeX, 2f), 0.2f, maxSlotSize);
+                slot.sizeY = Mathf.Clamp(SafeFloat(slot.sizeY, 2f), 0.2f, maxSlotSize);
                 if (!IsValidSlotKind(slot.kind)) slot.kind = SlotKind.Prop;
                 if (string.IsNullOrEmpty(slot.semantic))
                     slot.semantic = string.IsNullOrEmpty(slot.expectedModelHint) ? "灰色占位方块，基础几何体" : slot.expectedModelHint;
@@ -1450,7 +1481,9 @@ namespace EpicSpark.Graybox
                     reason = "语义槽位置越界";
                     return false;
                 }
-                if (slot.sizeX <= 0f || slot.sizeY <= 0f || slot.sizeX > 60f || slot.sizeY > 60f)
+                float maxSlotSize = Mathf.Clamp(
+                    Mathf.Max(60f, Mathf.Max(plan.width, plan.length) * 0.9f), 60f, 180f);
+                if (slot.sizeX <= 0f || slot.sizeY <= 0f || slot.sizeX > maxSlotSize || slot.sizeY > maxSlotSize)
                 {
                     reason = "语义槽尺寸异常";
                     return false;
@@ -1709,8 +1742,7 @@ namespace EpicSpark.Graybox
 
         private static float NormalizeSide(float value, float fallback)
         {
-            if (float.IsNaN(value) || float.IsInfinity(value) || value < 8f) return fallback;
-            return Mathf.Clamp(value, 8f, 400f);
+            return SceneSize.SideOrDefault(value, fallback);
         }
 
         private static int ComputeSlotBudget(float width, float length)

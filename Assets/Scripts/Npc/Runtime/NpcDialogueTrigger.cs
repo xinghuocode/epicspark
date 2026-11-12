@@ -1,4 +1,4 @@
-// NPC 对话触发：玩家在 3m 内按 F 交谈；对话服务由上层通过静态委托注入。
+// NPC 对话触发：玩家在 3m 内按鼠标右键交谈（与星火神殿操作一致）；对话服务由上层通过静态委托注入。
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -28,7 +28,8 @@ namespace EpicSpark.Npc.Runtime
 
         [Header("设置")]
         public float TalkRange = 3f;
-        public KeyCode TalkKey = KeyCode.F;
+        [Tooltip("与星火神殿一致：鼠标右键交谈")]
+        public KeyCode TalkKey = KeyCode.Mouse1;
 
         [Header("状态")]
         public bool CanTalk = true;
@@ -48,9 +49,17 @@ namespace EpicSpark.Npc.Runtime
             {
                 if (!CanTalk) return "";
                 string label = Label;
-                if (InConversation) return "按 " + TalkKey + " 结束与「" + label + "」的对话";
-                return "按 " + TalkKey + " 与「" + label + "」交谈";
+                if (InConversation) return "按 " + KeyLabel(TalkKey) + " 结束与「" + label + "」的对话";
+                return "按 " + KeyLabel(TalkKey) + " 与「" + label + "」交谈";
             }
+        }
+
+        private static string KeyLabel(KeyCode key)
+        {
+            if (key == KeyCode.Mouse0) return "鼠标左键";
+            if (key == KeyCode.Mouse1) return "鼠标右键";
+            if (key == KeyCode.Mouse2) return "鼠标中键";
+            return key.ToString();
         }
 
         private string Label
@@ -87,7 +96,12 @@ namespace EpicSpark.Npc.Runtime
             EpicSparkPlayerController player = RuntimeContext.Player;
             if (player == null || !player.InputEnabled) return;
             if (!InRange(player.transform.position)) return;
-            if (Input.GetKeyDown(TalkKey)) ToggleConversation();
+            if (Input.GetKeyDown(TalkKey))
+            {
+                // 准星正对着别的可交互对象时，右键优先交给它（避免隔着 NPC 误开对话）。
+                if (player.CurrentInteractable != null && !(player.CurrentInteractable is NpcDialogueTrigger)) return;
+                ToggleConversation();
+            }
         }
 
         // ───────────────────────── 交互 ─────────────────────────
@@ -128,7 +142,7 @@ namespace EpicSpark.Npc.Runtime
             }
 
             if (HudController.Instance != null)
-                HudController.Instance.SetInteractPrompt("按 " + TalkKey + " 结束与「" + Label + "」的对话");
+                HudController.Instance.SetInteractPrompt("按 " + KeyLabel(TalkKey) + " 结束与「" + Label + "」的对话");
 
             string opening = "你走近「" + Label + "」，向对方开口搭话。";
             _history.Add(opening);

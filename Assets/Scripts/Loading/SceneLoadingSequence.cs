@@ -1,4 +1,4 @@
-﻿// 新场景加载流程（设计文档第六节）四步曲：
+// 新场景加载流程（设计文档第六节）四步曲：
 // 1) 屏幕渐黑保持，视角切到新场景出生点；2) 灰盒阶段：灰色线条显示区域边界；
 // 3) 搭建阶段：蓝绿色线条显示每个美术资产的棱，前后遮挡正确；4) 贴图以张为单位由近及远显现，约 1 秒后进入游玩。
 using System;
@@ -98,7 +98,15 @@ namespace EpicSpark.Loading
             for (int i = 0; i < instance.models.Count; i++)
             {
                 ModelView view = instance.models[i];
-                if (view == null || view.renderer == null) continue;
+                if (view == null) continue;
+                // 素模模型是"根对象 + 多根几何体"，只切第一个 renderer 会留下大半建筑可见；
+                // 对没有 glb 的模型直接切整个根节点。
+                if (view.model == null && view.gameObject != null)
+                {
+                    view.gameObject.SetActive(visible);
+                    continue;
+                }
+                if (view.renderer == null) continue;
                 view.renderer.enabled = visible;
             }
         }

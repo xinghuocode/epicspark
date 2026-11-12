@@ -1,4 +1,4 @@
-﻿// 剧情&核心 Agent：优先走远程 LLM（tools / 纯 JSON），任何失败都整体回退到确定性生成。
+// 剧情&核心 Agent：优先走远程 LLM（tools / 纯 JSON），任何失败都整体回退到确定性生成。
 // 上层只用 BeginAsync / ContinueAsync 两个入口（IStoryAgent），不会感受到远程/本地差异。
 using System;
 using System.Collections.Generic;
@@ -90,6 +90,8 @@ namespace EpicSpark.Story
 
         /// <summary>最近一个回合是否来自远程模型（false 表示确定性兜底）。</summary>
         public bool LastTurnFromRemote { get; private set; }
+        public string LastContentSource { get; private set; } = "";
+        public string LastFallbackReason { get; private set; } = "";
 
         /// <summary>当前事件名（BeginAsync 记录，ContinueAsync 沿用）。</summary>
         public string EventName { get { return eventName; } }
@@ -131,14 +133,15 @@ namespace EpicSpark.Story
                         GameClock.TotalMinutes, false);
                     EnsureNarrative(remoteTurn, eventName, StoryStage.Opening);
                     remoteTurn.activeSceneIndex = Mathf.Clamp(remoteTurn.activeSceneIndex, 0, remoteTurn.scenes.Count - 1);
-                    Debug.Log("[Story] 远程生成第 1 幕成功，场景 " + remoteTurn.scenes.Count + " 个。");
-                    return remoteTurn;
+                    Debug.Log("[Story] 远程生成第 1 幕成功，场景 " + remoteTurn.scenes.Count + " 个，来源 "
+                              + (StoryJson.LastUsedRepair ? "RemoteRepaired" : "RemoteAccepted") + "。");
+                    return MarkRemote(remoteTurn);
                 }
 
                 StoryTurn turn = builder.BuildBeginTurn(eventName, this.knowledgeContext, GameClock.TotalMinutes);
                 turn.activeSceneIndex = 0;
                 Debug.Log("[Story] 使用确定性兜底生成第 1 幕（" + eventName + "）：" + DescribeFirstScene(turn));
-                return turn;
+                return MarkLocal(turn);
             }
             catch (Exception e)
             {
@@ -178,8 +181,9 @@ namespace EpicSpark.Story
                     EnsureNarrative(remoteTurn, eventName, stage);
                     remoteTurn.activeSceneIndex = Mathf.Clamp(remoteTurn.activeSceneIndex, 0, remoteTurn.scenes.Count - 1);
                     lastStageIndex = stageIndex;
-                    Debug.Log("[Story] 远程生成第 " + (stageIndex + 1) + " 幕（" + builder.DescribeStage(stage) + "）成功。");
-                    return remoteTurn;
+                    Debug.Log("[Story] 远程生成第 " + (stageIndex + 1) + " 幕（" + builder.DescribeStage(stage) + "）成功，来源 "
+                              + (StoryJson.LastUsedRepair ? "RemoteRepaired" : "RemoteAccepted") + "。");
+                    return MarkRemote(remoteTurn);
                 }
 
                 StoryTurn turn = builder.BuildContinueTurn(eventName, knowledgeContext, request, stageIndex, visitCount,
@@ -187,7 +191,7 @@ namespace EpicSpark.Story
                 lastStageIndex = stageIndex;
                 Debug.Log("[Story] 确定性推进到第 " + (stageIndex + 1) + " 幕（" + builder.DescribeStage(stage) + "）："
                     + DescribeFirstScene(turn) + (turn.gameOver ? "（结局）" : ""));
-                return turn;
+                return MarkLocal(turn);
             }
             catch (Exception e)
             {
@@ -334,6 +338,19 @@ namespace EpicSpark.Story
                 error = "叙述文字过短";
                 return null;
             }
+
+            // 结构化语义只是可选消歧提示；详细 layoutDescription 才是必需需求。
+            // 两种输入都进入同一个 GrayboxToolWorkspace，不存在质量较低的“无规格旁路”。
+            int withSpec = 0;
+            for (int i = 0; i < turn.scenes.Count; i++)
+            {
+                SceneSpec scene = turn.scenes[i];
+                if (scene == null) continue;
+                if (scene.layoutSpec != null && !scene.layoutSpec.Usable) scene.layoutSpec = null;
+                if (scene.layoutSpec != null) withSpec++;
+            }
+            if (withSpec == 0)
+                Debug.Log("[Story] 本幕使用详细自然语言需求，由灰盒 Agent 调用工具理解并校验。");
             error = "";
             return turn;
         }
@@ -344,6 +361,30 @@ namespace EpicSpark.Story
             remoteFailureLogged++;
             if (remoteFailureLogged <= 3)
                 Debug.LogWarning("[Story] 远程不可用，改走确定性兜底: " + message);
+        }
+
+        private StoryTurn MarkRemote(StoryTurn turn)
+        {
+            LastContentSource = StoryJson.LastUsedRepair ? "RemoteRepaired" : "RemoteAccepted";
+            LastFallbackReason = "";
+            if (turn != null)
+            {
+                turn.contentSource = LastContentSource;
+                turn.fallbackReason = "";
+            }
+            return turn;
+        }
+
+        private StoryTurn MarkLocal(StoryTurn turn)
+        {
+            LastContentSource = turn != null ? "LocalFallback" : "";
+            LastFallbackReason = string.IsNullOrEmpty(LastError) ? "未配置或未使用远端剧情模型" : LastError;
+            if (turn != null)
+            {
+                turn.contentSource = LastContentSource;
+                turn.fallbackReason = LastFallbackReason;
+            }
+            return turn;
         }
 
         // ─────────────────────────── 兜底与收尾 ───────────────────────────
@@ -387,12 +428,12 @@ namespace EpicSpark.Story
             try
             {
                 StoryTurn turn = builder.BuildBeginTurn(eventName, knowledgeContext, GameClock.TotalMinutes);
-                return turn;
+                return MarkLocal(turn);
             }
             catch (Exception inner)
             {
                 Debug.LogError("[Story] 确定性开局也失败: " + inner);
-                return MinimalTurn(0);
+                return MarkLocal(MinimalTurn(0));
             }
         }
 
@@ -403,12 +444,12 @@ namespace EpicSpark.Story
                 var request = new StoryContinueRequest { currentSceneId = "", currentSceneName = "" };
                 StoryTurn turn = builder.BuildContinueTurn(eventName, knowledgeContext, request,
                     Mathf.Clamp(lastStageIndex, 1, MaxScenes - 1), 1, GameClock.TotalMinutes);
-                return turn;
+                return MarkLocal(turn);
             }
             catch (Exception inner)
             {
                 Debug.LogError("[Story] 确定性推进也失败: " + inner);
-                return MinimalTurn(Mathf.Clamp(lastStageIndex + 1, 1, MaxScenes - 1));
+                return MarkLocal(MinimalTurn(Mathf.Clamp(lastStageIndex + 1, 1, MaxScenes - 1)));
             }
         }
 

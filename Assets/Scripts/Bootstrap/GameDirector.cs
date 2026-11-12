@@ -1,4 +1,4 @@
-﻿// 游戏总导演：把四层 Agent 串成可玩的循环。
+// 游戏总导演：把四层 Agent 串成可玩的循环。
 //  剧情&核心 Agent → 灰盒 Agent → 搭建 Agent →（必要时）资产生成 Agent → 加载动画 → 游玩 → 传送锚点 → 下一轮
 // 同时负责：场景复用、行为日志、游戏内时间、存档、NPC 对话接线。
 using System;
@@ -108,7 +108,7 @@ namespace EpicSpark.Bootstrap
                         Debug.LogWarning("[导演] 知识库检索失败，继续生成: " + e.Message);
                     }
                 }
-                GameClock.Reset(startYear > 0 ? startYear : 1789);
+                GameClock.Reset(startYear);
                 Debug.Log("[导演] 事件=" + userEvent + " 起始年=" + GameClock.BaseYear
                           + " 知识上下文长度=" + (knowledgeContext != null ? knowledgeContext.Length : 0));
 
@@ -129,6 +129,7 @@ namespace EpicSpark.Bootstrap
 
                 RegisterTurn(turn);
                 SceneSpec first = PickScene(turn);
+                if (first != null && first.startYear != 0) GameClock.Reset(first.startYear);
                 return await EnterSceneAsync(first, turn.narrative);
             }
             catch (Exception e)
@@ -209,6 +210,8 @@ namespace EpicSpark.Bootstrap
                     GameEvents.RaiseNotice("前往已生成的场景：" + target.sceneName);
                 }
 
+                if (target != null && target.startYear != 0 && target.startYear != GameClock.BaseYear)
+                    GameClock.Rebase(target.startYear);
                 DetachCurrent();
                 await EnterSceneAsync(target, narrative);
             }
@@ -237,6 +240,66 @@ namespace EpicSpark.Bootstrap
 
         // ─────────────────────────── 进入场景 ───────────────────────────
 
+        /// <summary>后台把剩余分段逐段搭建并追加到当前场景；被取消（切场景/读档）时立刻停。</summary>
+        private async Task StreamRemainingSegmentsAsync(SceneSpec spec, GrayboxPlan plan, SceneInstance instance)
+        {
+            List<ModelView> total = new List<ModelView>();
+            for (int segment = 1; segment < plan.segmentCount; segment++)
+            {
+                try
+                {
+                    GrayboxPlan segmentPlan = CloneSegment(plan, segment);
+                    if (segmentPlan.slots.Count == 0) continue;
+
+                    BuildResult segmentBuild = await Services.Build.BuildAsync(
+                        new BuildRequest { scene = spec, plan = segmentPlan, sliderValue = _tolerance }, _cts.Token);
+                    if (segmentBuild == null || segmentBuild.placed == null || segmentBuild.placed.Count == 0) continue;
+
+                    List<ModelView> added = await SceneAssembler.AppendModelsAsync(instance, segmentBuild, _cts.Token);
+                    total.AddRange(added);
+                    Debug.Log("[流式] 段 " + segment + " 完成：" + added.Count + " 个模型（累计 " + total.Count + " 个）");
+                }
+                catch (OperationCanceledException)
+                {
+                    Debug.Log("[流式] 分段加载被取消（切换场景或读档）。");
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning("[流式] 段 " + segment + " 失败，跳过: " + e.Message);
+                }
+            }
+            Debug.Log("[流式] 全部 " + plan.segmentCount + " 段拼搭完成，共追加 " + total.Count + " 个模型。");
+        }
+
+        /// <summary>复制一份只含指定分段的灰盒计划（其余字段共用引用，不改原计划）。</summary>
+        private static GrayboxPlan CloneSegment(GrayboxPlan plan, int segment)
+        {
+            var copy = new GrayboxPlan
+            {
+                sceneId = plan.sceneId,
+                width = plan.width,
+                length = plan.length,
+                seed = plan.seed,
+                spawnPoint = plan.spawnPoint,
+                regions = plan.regions,
+                paths = plan.paths,
+                npcPaths = plan.npcPaths,
+                plannerNote = plan.plannerNote,
+                segmentCount = plan.segmentCount,
+                specDriven = plan.specDriven,
+                layoutShift = plan.layoutShift,
+                layoutSpec = plan.layoutSpec,
+                slots = new List<GrayboxSlot>(),
+            };
+            for (int i = 0; i < plan.slots.Count; i++)
+            {
+                GrayboxSlot slot = plan.slots[i];
+                if (slot != null && slot.segment == segment) copy.slots.Add(slot);
+            }
+            return copy;
+        }
+
         private async Task<bool> EnterSceneAsync(SceneSpec spec, string narrative)
         {
             if (spec == null) return false;
@@ -262,7 +325,7 @@ namespace EpicSpark.Bootstrap
                 _currentInstance = reused;
                 TeleportPlayer(reused.spawnPoint);
                 SceneLoadingSequence.RevealImmediate(reused);
-                SceneAssembler.RefreshActors(reused, spec, null);
+                SceneAssembler.RefreshActors(reused, spec, reused.plan);
                 MarkVisited(spec.sceneId);
                 Debug.Log("[导演] 复用既有场景 " + spec.sceneId);
                 GameEvents.RaiseNotice("回到熟悉的场景：" + spec.sceneName);
@@ -299,8 +362,25 @@ namespace EpicSpark.Bootstrap
 
                 // 搭建阶段
                 GameEvents.RaisePhase(ScenePhase.Build);
-                GameEvents.RaiseNotice("搭建 Agent 正在挑选美术资产…");
-                var buildRequest = new BuildRequest { scene = spec, plan = plan, sliderValue = _tolerance };
+                GameEvents.RaiseNotice(EpicSparkFeatureFlags.UsePrimitiveScene
+                    ? "正在用程序化几何体搭建场景（素模阶段，不含美术资产）…"
+                    : "搭建 Agent 正在挑选美术资产…");
+
+                // 大场景只先搭第 0 段，剩余段由 StreamRemainingSegmentsAsync 追加；
+                // 否则 BuildAgent 会把整张图全搭一遍，流式阶段又从第 1 段重复追加。
+                GrayboxPlan initialPlan = plan;
+                if (plan.segmentCount > 1)
+                {
+                    GrayboxPlan segment0 = CloneSegment(plan, 0);
+                    if (segment0.slots != null && segment0.slots.Count > 0)
+                    {
+                        initialPlan = segment0;
+                        Debug.Log("[流式] 首次只搭建第 0 段：" + segment0.slots.Count + " 个槽位（共 "
+                                  + plan.slots.Count + " 个）。");
+                    }
+                }
+
+                var buildRequest = new BuildRequest { scene = spec, plan = initialPlan, sliderValue = _tolerance };
                 BuildResult build = null;
                 try
                 {
@@ -315,6 +395,13 @@ namespace EpicSpark.Bootstrap
                     GameEvents.RaiseNotice("搭建失败，无法生成场景。");
                     return false;
                 }
+                string buildIssue;
+                if (!ValidatePrimitiveBuild(initialPlan, build, out buildIssue))
+                {
+                    Debug.LogWarning("[导演] 素模搭建验收失败：" + buildIssue);
+                    GameEvents.RaiseNotice("场景搭建未通过校验：" + buildIssue);
+                    return false;
+                }
                 EpicSpark.Debugging.SceneDebugRecorder.WriteBuild(debugDir, build);
                 Debug.Log("[导演] 场景 " + spec.sceneId + " 放置 " + build.placed.Count
                           + " 个物体，新生成 " + build.generationCount + " 个资产，警告 " + build.warnings.Count + " 条");
@@ -325,6 +412,13 @@ namespace EpicSpark.Bootstrap
                 TeleportPlayer(instance.spawnPoint);
                 await SceneLoadingSequence.PlayAsync(instance, instance.spawnPoint, _cts.Token);
 
+                // 流式加载：第 0 段（60 米内）已可游玩，其余段后台继续搭建，玩家不等全场
+                if (plan.segmentCount > 1)
+                {
+                    Debug.Log("[流式] 场景共 " + plan.segmentCount + " 段，第 0 段已就绪，其余后台补齐。");
+                    _ = StreamRemainingSegmentsAsync(spec, plan, instance);
+                }
+
                 MarkVisited(spec.sceneId);
                 return true;
             }
@@ -332,6 +426,35 @@ namespace EpicSpark.Bootstrap
             {
                 SetInputEnabled(true);
             }
+        }
+
+        private static bool ValidatePrimitiveBuild(GrayboxPlan plan, BuildResult build, out string issue)
+        {
+            issue = string.Empty;
+            if (!build.primitiveMode) { issue = "结果不是素模模式"; return false; }
+            var placed = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < build.placed.Count; i++)
+            {
+                PlacedAsset item = build.placed[i];
+                if (item == null) continue;
+                if (string.IsNullOrEmpty(item.primitive) || string.IsNullOrEmpty(item.modelId)
+                    || !item.modelId.StartsWith("prim:", StringComparison.Ordinal))
+                {
+                    issue = "检测到非几何体资产：" + (item.modelId ?? item.slotId);
+                    return false;
+                }
+                placed.Add(item.slotId);
+            }
+            if (plan != null && plan.slots != null)
+            {
+                for (int i = 0; i < plan.slots.Count; i++)
+                {
+                    GrayboxSlot slot = plan.slots[i];
+                    if (slot == null || slot.kind == SlotKind.Anchor || slot.kind == SlotKind.Npc) continue;
+                    if (!placed.Contains(slot.slotId)) { issue = "灰盒槽位未落地：" + slot.slotId; return false; }
+                }
+            }
+            return true;
         }
 
         private void DetachCurrent()
@@ -435,6 +558,7 @@ namespace EpicSpark.Bootstrap
             if (Services.Save == null) return;
             GameSaveData save = Services.Save;
             save.gameMinutes = GameClock.TotalMinutes;
+            save.baseYear = GameClock.BaseYear;
             save.actionLog = GameLog.Recent("", 300);
             save.knownScenes.Clear();
             foreach (KeyValuePair<string, SceneSpec> pair in _specs)
@@ -540,7 +664,7 @@ namespace EpicSpark.Bootstrap
                         Debug.LogWarning("[导演] 读档知识检索失败: " + e.Message);
                     }
                 }
-                GameClock.SetFromSave(save.gameMinutes, startYear > 0 ? startYear : 1789);
+                GameClock.SetFromSave(save.gameMinutes, save.baseYear != 0 ? save.baseYear : startYear);
 
                 // 存档里保存了场景定义，直接按 sceneId 还原；没有再退回剧情首幕
                 for (int i = 0; i < save.knownScenes.Count; i++)
@@ -567,6 +691,7 @@ namespace EpicSpark.Bootstrap
                     return false;
                 }
 
+                if (save.baseYear == 0 && target.startYear != 0) GameClock.Rebase(target.startYear);
                 RestorePlayerState(save);
                 Debug.Log("[导演] 读档：" + save.userEvent + " → " + target.sceneId + " @ " + GameClock.Display()
                           + "，历史行为 " + (save.actionLog != null ? save.actionLog.Count : 0) + " 条");

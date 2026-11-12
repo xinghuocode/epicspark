@@ -1,6 +1,7 @@
 // EpicSpark 第一人称玩家控制器
-// 输入：WASD 移动 / Space 跳跃 / LeftCtrl 或 C 下蹲 / LeftShift 冲刺 / 鼠标转视角 /
-//       Esc 释放鼠标 / E 互动 / 鼠标左键攻击射击 / F 与当前目标对话。
+// 操作与星火神殿开始场景保持一致：WASD 移动 / Q 奔跑 / E 呼出或锁定鼠标 / Space 跳跃 /
+// 鼠标左键攻击射击 / 鼠标右键交互（锚点、NPC 对话）/ Shift 或 C 下蹲。
+// 额外键位：Esc 释放鼠标（备用）、X 切换手持工具、R 换弹。
 using UnityEngine;
 using UnityEngine.EventSystems;
 using EpicSpark.Core;
@@ -35,15 +36,21 @@ namespace EpicSpark.Player
         public float talkDistance = 3f;
 
         [Header("按键")]
-        public KeyCode interactKey = KeyCode.E;
-        public KeyCode talkKey = KeyCode.F;
+        [Tooltip("呼出 / 锁定鼠标（与星火神殿一致）")]
+        public KeyCode cursorToggleKey = KeyCode.E;
+        [Tooltip("交互 / 传送 / 对话（与星火神殿一致，用鼠标右键）")]
+        public KeyCode interactKey = KeyCode.Mouse1;
+        [Tooltip("兼容旧逻辑的对话键；默认关闭，对话统一走右键交互")]
+        public KeyCode talkKey = KeyCode.None;
         public KeyCode jumpKey = KeyCode.Space;
-        public KeyCode sprintKey = KeyCode.LeftShift;
-        public KeyCode crouchKey = KeyCode.LeftControl;
+        [Tooltip("奔跑（与星火神殿一致）")]
+        public KeyCode sprintKey = KeyCode.Q;
+        [Tooltip("下蹲（与星火神殿一致）")]
+        public KeyCode crouchKey = KeyCode.LeftShift;
         public KeyCode crouchAltKey = KeyCode.C;
         public KeyCode releaseCursorKey = KeyCode.Escape;
         [Tooltip("切换手持工具（枪 / 挎包）")]
-        public KeyCode switchToolKey = KeyCode.Q;
+        public KeyCode switchToolKey = KeyCode.X;
         [Tooltip("换弹")]
         public KeyCode reloadKey = KeyCode.R;
 
@@ -242,6 +249,12 @@ namespace EpicSpark.Player
 
         private void UpdateCursorState()
         {
+            if (InputEnabled && Input.GetKeyDown(cursorToggleKey))
+            {
+                SetCursorLocked(!IsCursorLocked);
+                return;
+            }
+
             if (Input.GetKeyDown(releaseCursorKey)) SetCursorLocked(false);
 
             if (!IsCursorLocked && Input.GetMouseButtonDown(0))
@@ -319,7 +332,7 @@ namespace EpicSpark.Player
             string prompt = CurrentInteractable != null ? CurrentInteractable.InteractPrompt : null;
             if (HudController.Instance != null) HudController.Instance.SetInteractPrompt(prompt);
 
-            if (CurrentInteractable != null && Input.GetKeyDown(interactKey))
+            if (IsCursorLocked && CurrentInteractable != null && Input.GetKeyDown(interactKey))
                 CurrentInteractable.Interact(this);
         }
 

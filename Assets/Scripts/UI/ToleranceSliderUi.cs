@@ -25,7 +25,7 @@ namespace EpicSpark.UI
         [Tooltip("允许在游玩中按住 Tab 显示")]
         public bool allowTabToggle = true;
         public KeyCode toggleKey = KeyCode.Tab;
-        public string title = "容忍度";
+        public string title = "素模模式 · 美术库已禁用";
 
         public float Value
         {
@@ -140,6 +140,7 @@ namespace EpicSpark.UI
         private void BuildSlider(RectTransform parent)
         {
             Slider slider = parent.gameObject.AddComponent<Slider>();
+            slider.interactable = false; // 当前强制素模；原资产复用容忍度不再影响生成。
 
             Image background = UiFactory.NewImage("Background", parent, new Color(1f, 1f, 1f, 0.16f));
             UiFactory.Stretch(background.rectTransform, 6f, 8f, 6f, 8f);
@@ -180,7 +181,7 @@ namespace EpicSpark.UI
 
         private void UpdateValueText()
         {
-            if (_valueText != null) _valueText.text = _value.ToString("0.00");
+            if (_valueText != null) _valueText.text = "几何体";
         }
 
         private void HandleSliderChanged(float value)

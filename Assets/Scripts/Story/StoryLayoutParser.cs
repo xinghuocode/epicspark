@@ -1,4 +1,4 @@
-﻿// 剧情布局解析器：把 剧情&核心 Agent 写的 layoutDescription（自由中文）解析成结构化地编数据。
+// 剧情布局解析器：把 剧情&核心 Agent 写的 layoutDescription（自由中文）解析成结构化地编数据。
 //
 // 为什么需要它：
 //   剧情 Agent 会写出非常具体的地编蓝图，例如
@@ -36,6 +36,12 @@ namespace EpicSpark.Story
         public float rotation;
         public bool hasFootprint;
         public int count = 1;
+        /// <summary>连续街屋/排屋的分组 id；普通地标为空。</summary>
+        public string rowId = "";
+        /// <summary>该单元在排屋中的序号（0 起）；普通地标为 0。</summary>
+        public int rowIndex;
+        /// <summary>这一排应拆出的单元数；由 LayoutSpec 执行器完成实际拆分。</summary>
+        public int rowCount = 1;
     }
 
     /// <summary>地面分区（广场、河滩、草地……）。</summary>
@@ -53,6 +59,8 @@ namespace EpicSpark.Story
     public class LayoutPath
     {
         public string name = "";
+        /// <summary>road / wall / fence：界墙与栅栏按墙体渲染，不铺路面。</summary>
+        public string kind = "road";
         public float width = 6f;
         public readonly List<Vector2> nodes = new List<Vector2>();
     }
@@ -80,11 +88,16 @@ namespace EpicSpark.Story
             RegexOptions.Compiled);
         private static readonly Regex ZRange = new Regex(@"Z\s*" + Num + @"\s*\.\.\s*" + Num, RegexOptions.Compiled);
         private static readonly Regex XRange = new Regex(@"X\s*" + Num + @"\s*\.\.\s*" + Num, RegexOptions.Compiled);
-        private static readonly Regex Point = new Regex(@"\(\s*" + Num + @"\s*,\s*" + Num + @"\s*\)", RegexOptions.Compiled);
+        private static readonly Regex Point = new Regex(@"\(\s*(?:x\s*)?" + Num + @"\s*,\s*(?:z\s*)?" + Num + @"\s*\)", RegexOptions.Compiled);
         // 确定性剧情常用点对矩形：(+16, -14)..(+26, -2)
         private static readonly Regex PointPair = new Regex(
-            @"\(\s*" + Num + @"\s*,\s*" + Num + @"\s*\)\s*(?:\.\.|…|—|–|~|～|至|到)\s*\(\s*" + Num + @"\s*,\s*" + Num + @"\s*\)",
+            @"\(\s*(?:x\s*)?" + Num + @"\s*,\s*(?:z\s*)?" + Num + @"\s*\)\s*(?:\.\.|…|—|–|~|～|至|到)\s*\(\s*(?:x\s*)?" + Num + @"\s*,\s*(?:z\s*)?" + Num + @"\s*\)",
             RegexOptions.Compiled);
+        // 「正立面在 Z=+21、面阔 18 米、进深 10 米」不是 X..Z 矩形，但同样是一个明确占地。
+        private static readonly Regex AxisZ = new Regex(@"Z\s*=\s*" + Num, RegexOptions.Compiled);
+        private static readonly Regex AxisX = new Regex(@"X\s*=\s*" + Num, RegexOptions.Compiled);
+        private static readonly Regex Frontage = new Regex(@"面阔\s*(\d+(?:\.\d+)?)\s*米", RegexOptions.Compiled);
+        private static readonly Regex DepthSize = new Regex(@"进深\s*(\d+(?:\.\d+)?)\s*米", RegexOptions.Compiled);
         private static readonly Regex SizeCross = new Regex(
             @"(\d+(?:\.\d+)?)\s*[x×X*]\s*(\d+(?:\.\d+)?)\s*米", RegexOptions.Compiled);
         private static readonly Regex SizeWidth = new Regex(@"宽\s*(\d+(?:\.\d+)?)\s*米", RegexOptions.Compiled);
@@ -96,14 +109,14 @@ namespace EpicSpark.Story
 
         private static readonly string[] BuildingWords =
         {
-            "楼", "堂", "厅", "塔", "城门", "门楼", "堡", "宫", "寺", "院", "桥", "城墙", "民居", "店铺", "仓",
-            "衙", "府", "署", "门", "屋", "房", "墙", "堤", "码头", "台阶", "石阶",
+            "楼", "堂", "厅", "塔", "城门", "门楼", "堡", "宫", "寺", "院", "桥", "城墙", "民居", "民宅", "住宅",
+            "房屋", "店铺", "仓", "衙", "府", "署", "门", "屋", "房", "墙", "堤", "码头", "台阶", "石阶",
         };
 
         private static readonly string[] PropWords =
         {
             "井", "车", "摊", "箱", "绳", "告示", "长椅", "灯", "炮", "旗", "桌", "桶", "柱", "碑", "木栅", "棚",
-            "板", "架", "篮", "袋", "柜台", "钟",
+            "板", "架", "篮", "袋", "柜台", "钟", "断头台",
         };
 
         private static readonly string[] ZoneWaterWords = { "河", "水", "堤", "岸", "渠", "湖", "塘", "海" };
@@ -112,7 +125,7 @@ namespace EpicSpark.Story
 
         private static readonly string[] NameMarkers =
         {
-            "位于", "占地", "占", "门体", "停放于", "停放", "开在", "通向", "有", "为", "是", "自", "宽", "高", "(", "，", ",",
+            "位于", "占地", "占", "正立面", "面阔", "进深", "门体", "停放于", "停放", "开在", "通向", "有", "为", "是", "自", "宽", "高", "(", "，", ",",
         };
 
         private static readonly string[] LeadingNoise =
@@ -171,7 +184,14 @@ namespace EpicSpark.Story
                 if (parsedPath != null && parsedPath.nodes.Count >= 2)
                 {
                     layout.paths.Add(parsedPath);
-                    return;
+                    // 「路两侧是背靠背的旧货铺与酒馆」这种只有路、建筑没坐标：沿路补两栋
+                    if (sentence.IndexOf("占地", StringComparison.Ordinal) < 0 || !HasBuildingWords(sentence))
+                    {
+                        if (sentence.IndexOf("两侧", StringComparison.Ordinal) >= 0
+                            || sentence.IndexOf("沿街", StringComparison.Ordinal) >= 0)
+                            AddAlongRoadItems(layout, usedNames, sentence, parsedPath);
+                        return;
+                    }
                 }
             }
 
@@ -180,10 +200,120 @@ namespace EpicSpark.Story
             Match point = Point.Match(sentence);           // (x,z)
 
             bool hasFootprint = footprint.Success || pointRect.Success;
+            bool axisFootprint = false;
+            float axisX0 = 0f, axisX1 = 0f, axisZ0 = 0f, axisZ1 = 0f;
+            if (!hasFootprint && !point.Success)
+                axisFootprint = TryAxisFootprint(sentence, out axisX0, out axisX1, out axisZ0, out axisZ1);
+            if (axisFootprint) hasFootprint = true;
+
             if (!hasFootprint && !point.Success && !ZRange.IsMatch(sentence) && !XRange.IsMatch(sentence)) return;
 
             string name = ExtractName(sentence);
+            if (string.IsNullOrEmpty(name) || name == "广场" || name == "正中" || name == "中心")
+                name = ExtractNameAfterPoint(sentence, name);
             string kind = ClassifyKind(name + " " + sentence);
+            // 锚点线索只对「没有占地范围」的载体生效。
+            // 否则「巴士底狱要塞……吊桥桥头坐标为 (22,25)」会因为句子里出现"桥头"被误判成锚点，
+            // 50×35 的要塞整栋从建筑槽里消失（只剩一个 2.4m 锚点标记）。
+            bool anchorCue = sentence.IndexOf("锚点载体", StringComparison.Ordinal) >= 0
+                             || sentence.IndexOf("载体要求", StringComparison.Ordinal) >= 0
+                             || sentence.IndexOf("台阶", StringComparison.Ordinal) >= 0
+                             || sentence.IndexOf("桥头", StringComparison.Ordinal) >= 0
+                             || sentence.IndexOf("门廊", StringComparison.Ordinal) >= 0
+                             || sentence.IndexOf("马车停", StringComparison.Ordinal) >= 0;
+            if (anchorCue && !hasFootprint) kind = "Anchor";
+
+            // A0) 多行排布：「三排木摊台沿X轴排列于 z=3、z=7、z=11」→ 每行 3 个摊位。
+            // 不能只看到「台」就拆：市政厅的「主台阶」也曾被当成摊台，导致整栋市政厅消失。
+            if (sentence.IndexOf("摊", StringComparison.Ordinal) >= 0
+                || (sentence.IndexOf("台", StringComparison.Ordinal) >= 0
+                    && sentence.IndexOf("排", StringComparison.Ordinal) >= 0))
+            {
+                if (AddMultiRowStalls(layout, usedNames, name, sentence))
+                {
+                    if (sentence.IndexOf("棚", StringComparison.Ordinal) >= 0)
+                    {
+                        Match shed = PointPair.Match(sentence);
+                        if (shed.Success)
+                        {
+                            float sx0 = F(shed.Groups[1].Value), sz0 = F(shed.Groups[2].Value);
+                            float sx1 = F(shed.Groups[3].Value), sz1 = F(shed.Groups[4].Value);
+                            AddFootprintItems(layout, usedNames, "菜市场棚", sentence, "Building",
+                                (sx0 + sx1) * 0.5f, (sz0 + sz1) * 0.5f,
+                                Mathf.Abs(sx1 - sx0), Mathf.Abs(sz1 - sz0), 0f);
+                        }
+                    }
+                    return;
+                }
+            }
+
+            // A1) 界墙留缺口：「自(-16,22)至(16,22)，中间留4米宽缺口」→ 断成两段墙
+            if (sentence.IndexOf("缺口", StringComparison.Ordinal) >= 0)
+            {
+                Match gapA = PointPair.Match(sentence);
+                Match gapWidth = SizeWidth.Match(sentence);
+                if (gapA.Success && gapWidth.Success)
+                {
+                    float ax = F(gapA.Groups[1].Value), az = F(gapA.Groups[2].Value);
+                    float bx = F(gapA.Groups[3].Value), bz = F(gapA.Groups[4].Value);
+                    float gap = F(gapWidth.Groups[1].Value);
+                    var dir = new Vector2(bx - ax, bz - az);
+                    float len = dir.magnitude;
+                    if (len > gap + 2f)
+                    {
+                        dir = dir / len;
+                        var mid = new Vector2((ax + bx) * 0.5f, (az + bz) * 0.5f);
+                        Vector2 g0 = mid - dir * (gap * 0.5f);
+                        Vector2 g1 = mid + dir * (gap * 0.5f);
+                        layout.paths.Add(new LayoutPath { name = name, kind = "wall", width = 1.2f, nodes = { new Vector2(ax, az), g0 } });
+                        layout.paths.Add(new LayoutPath { name = name, kind = "wall", width = 1.2f, nodes = { g1, new Vector2(bx, bz) } });
+                        return;
+                    }
+                }
+            }
+
+            // A2) 一句写多个占地（「占地分别(20,-6)—(44,4)与(20,10)—(44,20)」）：每个都成地标
+            MatchCollection multi = PointPair.Matches(sentence);
+            // 【地面】一句里常并列多个铺装范围；每个矩形都要成为地面分区，
+            // 不能只取第一个，否则 200×200 大场景只剩中央广场一块地面。
+            if (multi.Count >= 2 && sentence.IndexOf("【地面】", StringComparison.Ordinal) >= 0)
+            {
+                for (int i = 0; i < multi.Count; i++)
+                {
+                    Match pair = multi[i];
+                    float px0 = F(pair.Groups[1].Value), pz0 = F(pair.Groups[2].Value);
+                    float px1 = F(pair.Groups[3].Value), pz1 = F(pair.Groups[4].Value);
+                    AddZone(layout, name, sentence,
+                        Mathf.Min(px0, px1), Mathf.Max(px0, px1),
+                        Mathf.Min(pz0, pz1), Mathf.Max(pz0, pz1));
+                }
+                return;
+            }
+            if (multi.Count >= 2 && hasFootprint && !LooksLikeGround(sentence, kind))
+            {
+                for (int i = 0; i < multi.Count; i++)
+                {
+                    Match pair = multi[i];
+                    float px0 = F(pair.Groups[1].Value), pz0 = F(pair.Groups[2].Value);
+                    float px1 = F(pair.Groups[3].Value), pz1 = F(pair.Groups[4].Value);
+                    string baseName = string.IsNullOrEmpty(name) ? "沿街建筑" : name;
+                    float pairW = Mathf.Abs(px1 - px0);
+                    float pairD = Mathf.Abs(pz1 - pz0);
+                    // 「北侧沿街民居……第一排占地(-40,52)—(-10,70)，第二排占地(10,52)—(40,70)」
+                    // 是两个 30×18 的排屋地块，不能各放成一栋 30 米宽的大房子。
+                    int pairSplit = 1;
+                    if (IsRowName(baseName, sentence))
+                    {
+                        float longSide = Mathf.Max(pairW, pairD);
+                        if (longSide >= 18f)
+                            pairSplit = Mathf.Clamp(Mathf.RoundToInt(longSide / 9f), 2, 8);
+                    }
+                    AddFootprintItems(layout, usedNames, baseName + "_" + (i + 1).ToString(CultureInfo.InvariantCulture),
+                        sentence, kind, (px0 + px1) * 0.5f, (pz0 + pz1) * 0.5f,
+                        pairW, pairD, 0f, pairSplit);
+                }
+                return;
+            }
 
             float x0 = 0f, x1 = 0f, z0 = 0f, z1 = 0f;
             if (footprint.Success)
@@ -199,6 +329,13 @@ namespace EpicSpark.Story
                 z0 = F(pointRect.Groups[2].Value);
                 x1 = F(pointRect.Groups[3].Value);
                 z1 = F(pointRect.Groups[4].Value);
+            }
+            else if (axisFootprint)
+            {
+                x0 = axisX0;
+                x1 = axisX1;
+                z0 = axisZ0;
+                z1 = axisZ1;
             }
             if (hasFootprint)
             {
@@ -253,20 +390,27 @@ namespace EpicSpark.Story
 
             // 4) 尺寸精修：N×M 米 / 直径 / 宽 / 高
             float sizeW = 0f, sizeD = 0f;
+            bool explicitSize = false;
             Match cross = SizeCross.Match(sentence);
             if (cross.Success)
             {
                 sizeW = F(cross.Groups[1].Value);
                 sizeD = F(cross.Groups[2].Value);
+                explicitSize = true;
             }
             Match radius = SizeRadius.Match(sentence);
             if (radius.Success)
             {
                 sizeW = F(radius.Groups[1].Value);
                 sizeD = sizeW;
+                explicitSize = true;
             }
             Match widthMatch = SizeWidth.Match(sentence);
-            if (sizeW <= 0f && widthMatch.Success) sizeW = F(widthMatch.Groups[1].Value);
+            if (sizeW <= 0f && widthMatch.Success)
+            {
+                sizeW = F(widthMatch.Groups[1].Value);
+                explicitSize = true;
+            }
 
             if (sizeW > 0f)
             {
@@ -284,7 +428,7 @@ namespace EpicSpark.Story
             }
 
             // 没有任何尺寸的建筑：按名称给个体量，别让全场都是 4×4 小方块
-            if (kind == "Building" && width <= 4.5f && depth <= 4.5f)
+            if (kind == "Building" && !explicitSize && width <= 4.5f && depth <= 4.5f)
             {
                 float guess = GuessBuildingSize(name, sentence);
                 width = guess;
@@ -293,6 +437,23 @@ namespace EpicSpark.Story
 
             width = Mathf.Clamp(width, 0.6f, 70f);
             depth = Mathf.Clamp(depth, 0.6f, 70f);
+
+            // 「街道两侧为三层木筋墙民居」写的是一整排：按 9 米一间拆成多栋，否则会变成一栋巨型方盒子。
+            // 深进深的长条（例如 50×20 的南侧民居群）保留成一个带 rowId/rowCount 的聚合体，
+            // 交给 StoryLayoutSpecBuilder 先按道路切翼、再按开间拆分；旧版地编仍按一个整块处理（回退）。
+            int pendingRowUnits = 0;
+            if (hasFootprint && IsRowName(name, sentence))
+            {
+                float h = heightValue(sentence);
+                int split = Mathf.Clamp(Mathf.RoundToInt(Mathf.Max(width, depth) / 9f), 2, 8);
+                if (Mathf.Max(width, depth) >= 18f && Mathf.Min(width, depth) <= 14f && sentence.IndexOf("棚", StringComparison.Ordinal) < 0)
+                {
+                    AddFootprintItems(layout, usedNames, name, sentence, kind, centerX, centerZ, width, depth, h, split);
+                    return;
+                }
+                if (Mathf.Max(width, depth) >= 18f)
+                    pendingRowUnits = split;
+            }
 
             Match heightMatch = SizeHeight.Match(sentence);
             float height = heightMatch.Success ? F(heightMatch.Groups[1].Value) : 0f;
@@ -325,9 +486,11 @@ namespace EpicSpark.Story
                     width = width,
                     depth = depth,
                     height = height,
-                    rotation = width >= depth ? 0f : 90f,
+                    rotation = 0f,
                     hasFootprint = hasFootprint,
                     count = 1,
+                    rowId = pendingRowUnits > 1 ? name : "",
+                    rowCount = pendingRowUnits > 1 ? pendingRowUnits : 1,
                 });
                 return;
             }
@@ -350,7 +513,7 @@ namespace EpicSpark.Story
                     width = Mathf.Max(1.5f, slotW),
                     depth = Mathf.Max(1.5f, slotD),
                     height = height,
-                    rotation = alongX ? 0f : 90f,
+                    rotation = 0f,
                     hasFootprint = hasFootprint,
                     count = count,
                 });
@@ -382,6 +545,235 @@ namespace EpicSpark.Story
             return false;
         }
 
+        /// <summary>多行排布：从「z=3、z=7、z=11」这样的列表生成成排摊位。</summary>
+        private static bool AddMultiRowStalls(StoryLayout layout, HashSet<string> usedNames, string name, string sentence)
+        {
+            var rows = new List<float>();
+            foreach (Match m in Regex.Matches(sentence, @"z\s*=\s*(-?\d+(?:\.\d+)?)")) rows.Add(F(m.Groups[1].Value));
+            if (rows.Count < 2) return false;
+
+            Match xm = Regex.Match(sentence, @"x\s*=\s*(-?\d+(?:\.\d+)?)");
+            float baseX = xm.Success ? F(xm.Groups[1].Value) : 0f;
+            string baseName = string.IsNullOrEmpty(name) ? "摊台" : name;
+
+            for (int r = 0; r < rows.Count && r < 6; r++)
+            {
+                for (int k = 0; k < 3; k++)
+                {
+                    float cx = baseX + (k - 1) * 4f;
+                    string key = baseName + "|" + Mathf.RoundToInt(cx * 10f) + "|" + Mathf.RoundToInt(rows[r] * 10f);
+                    if (usedNames != null && !usedNames.Add(key)) continue;
+                    layout.items.Add(new LayoutItem
+                    {
+                        name = baseName + "_r" + (r + 1) + "_" + (k + 1),
+                        raw = TrimTo(sentence, 90),
+                        kind = "Prop",
+                        center = new Vector2(cx, rows[r]),
+                        width = 3f, depth = 3f, height = 0f,
+                        rotation = 0f, hasFootprint = false, count = 3,
+                    });
+                }
+            }
+            return true;
+        }
+
+        /// <summary>沿一条已解析的道路补两栋沿街建筑（用于"路两侧是旧货铺与酒馆"这类无坐标描写）。</summary>
+        private static void AddAlongRoadItems(StoryLayout layout, HashSet<string> usedNames, string sentence, LayoutPath road)
+        {
+            if (layout == null || road == null || road.nodes.Count < 2) return;
+            Vector2 a = road.nodes[0];
+            Vector2 b = road.nodes[road.nodes.Count - 1];
+            var dir = b - a;
+            if (dir.sqrMagnitude < 1f) return;
+            dir.Normalize();
+            var normal = new Vector2(-dir.y, dir.x) * (road.width * 0.5f + 4f);
+
+            for (int k = 0; k < 2; k++)
+            {
+                Vector2 pos = Vector2.Lerp(a, b, 0.32f + k * 0.34f) + normal;
+                string key = "沿街|" + Mathf.RoundToInt(pos.x * 10f) + "|" + Mathf.RoundToInt(pos.y * 10f);
+                if (usedNames != null && !usedNames.Add(key)) continue;
+                layout.items.Add(new LayoutItem
+                {
+                    name = "沿街店面_" + (k + 1),
+                    raw = TrimTo(sentence, 90),
+                    kind = "Decoration",
+                    center = pos,
+                    width = 8f, depth = 6f, height = 0f,
+                    rotation = 0f, hasFootprint = false, count = 1,
+                });
+            }
+        }
+
+        private static bool HasBuildingWords(string sentence)
+        {
+            string[] words = { "占地", "民居", "民宅", "住宅", "房屋", "铺", "酒馆", "屋", "楼", "店", "棚", "厅", "堂", "仓", "厂" };
+            for (int i = 0; i < words.Length; i++)
+                if (sentence.IndexOf(words[i], StringComparison.Ordinal) >= 0) return true;
+            return false;
+        }
+
+        private static bool IsRowName(string name, string sentence)
+        {
+            string[] words = { "成排", "连排", "排屋", "联排", "民居", "临街房屋", "沿街", "一排排" };
+            string text = (name ?? "") + " " + (sentence ?? "");
+            for (int i = 0; i < words.Length; i++)
+                if (text.IndexOf(words[i], StringComparison.Ordinal) >= 0) return true;
+            return false;
+        }
+
+        private static float heightValue(string sentence)
+        {
+            Match m = SizeHeight.Match(sentence);
+            return m.Success ? F(m.Groups[1].Value) : 0f;
+        }
+
+        /// <summary>
+        /// 「正立面在 Z=+21、面阔 18 米(X -9…+9)、进深 10 米」这种写法没有 X..Z 矩形，
+        /// 但对北侧临街建筑是完整信息：面宽 + 进深 + 正立面所在轴线。
+        /// </summary>
+        private static bool TryAxisFootprint(
+            string sentence, out float x0, out float x1, out float z0, out float z1)
+        {
+            x0 = x1 = z0 = z1 = 0f;
+            Match zAxis = AxisZ.Match(sentence);
+            Match xAxis = AxisX.Match(sentence);
+            Match front = Frontage.Match(sentence);
+            Match depth = DepthSize.Match(sentence);
+            if ((!zAxis.Success && !xAxis.Success) || !depth.Success) return false;
+
+            float d = F(depth.Groups[1].Value);
+            if (d < 1f) return false;
+
+            if (zAxis.Success)
+            {
+                float face = F(zAxis.Groups[1].Value);
+                Match xr = XRange.Match(sentence);
+                if (xr.Success)
+                {
+                    x0 = F(xr.Groups[1].Value);
+                    x1 = F(xr.Groups[2].Value);
+                }
+                else if (front.Success)
+                {
+                    float w = F(front.Groups[1].Value);
+                    x0 = -w * 0.5f;
+                    x1 = w * 0.5f;
+                }
+                else return false;
+
+                float dir = face >= 0f ? 1f : -1f;
+                z0 = face;
+                z1 = face + dir * d;
+            }
+            else
+            {
+                float face = F(xAxis.Groups[1].Value);
+                Match zr = ZRange.Match(sentence);
+                if (zr.Success)
+                {
+                    z0 = F(zr.Groups[1].Value);
+                    z1 = F(zr.Groups[2].Value);
+                }
+                else if (front.Success)
+                {
+                    float w = F(front.Groups[1].Value);
+                    z0 = -w * 0.5f;
+                    z1 = w * 0.5f;
+                }
+                else return false;
+
+                float dir = face >= 0f ? 1f : -1f;
+                x0 = face;
+                x1 = face + dir * d;
+            }
+
+            if (x0 > x1) { float t = x0; x0 = x1; x1 = t; }
+            if (z0 > z1) { float t = z0; z0 = z1; z1 = t; }
+            return Mathf.Abs(x1 - x0) >= 1f && Mathf.Abs(z1 - z0) >= 1f;
+        }
+
+        /// <summary>
+        /// 「广场正中 (0,0) 立着新竖起来的断头台」这类句子，名字在坐标之后。
+        /// 只靠前置名字会被剥成「广场」，最终整座断头台消失。
+        /// </summary>
+        private static string ExtractNameAfterPoint(string sentence, string fallback)
+        {
+            MatchCollection points = Point.Matches(sentence);
+            if (points.Count == 0) return fallback;
+            Match last = points[points.Count - 1];
+            int end = last.Index + last.Length;
+            if (end >= sentence.Length) return fallback;
+
+            string tail = sentence.Substring(end).Trim(' ', ',', '，', ':', '；', ';', '、');
+            string[] leading = { "立着", "矗立着", "放着", "堆着", "挂着", "新建的", "新竖起来的", "旧", "一座", "一个", "两座", "两个", "是", "为", "有", "在" };
+            bool changed = true;
+            while (changed && tail.Length > 1)
+            {
+                changed = false;
+                for (int i = 0; i < leading.Length; i++)
+                {
+                    if (tail.StartsWith(leading[i], StringComparison.Ordinal))
+                    {
+                        tail = tail.Substring(leading[i].Length).Trim(' ', ',', '，', ':', '；', ';', '、');
+                        changed = true;
+                    }
+                }
+            }
+            char[] stops = { ',', '，', ';', '；', '。' };
+            int cut = tail.IndexOfAny(stops);
+            if (cut > 0) tail = tail.Substring(0, cut);
+            string cleaned = CleanName(tail);
+            return string.IsNullOrEmpty(cleaned) ? fallback : cleaned;
+        }
+
+        /// <summary>把一个占地范围落成 1 个或多个地标（成排/连排时沿长边等分）。</summary>
+        private static void AddFootprintItems(
+            StoryLayout layout, HashSet<string> usedNames, string name, string sentence,
+            string kind, float centerX, float centerZ, float width, float depth, float height, int split = 1)
+        {
+            if (layout == null) return;
+            if (usedNames != null)
+            {
+                string key = name + "|" + Mathf.RoundToInt(centerX * 10f) + "|" + Mathf.RoundToInt(centerZ * 10f);
+                if (!usedNames.Add(key)) return;
+            }
+            width = Mathf.Clamp(width, 0.6f, 70f);
+            depth = Mathf.Clamp(depth, 0.6f, 70f);
+            split = Mathf.Clamp(split, 1, 8);
+
+            if (split <= 1)
+            {
+                layout.items.Add(new LayoutItem
+                {
+                    name = name, raw = TrimTo(sentence, 90), kind = kind,
+                    center = new Vector2(centerX, centerZ),
+                    width = width, depth = depth, height = height,
+                    rotation = 0f, hasFootprint = true, count = 1,
+                });
+                return;
+            }
+
+            bool alongX = width >= depth;
+            float slotW = alongX ? width / split : width;
+            float slotD = alongX ? depth : depth / split;
+            for (int k = 0; k < split; k++)
+            {
+                float offset = k - (split - 1) * 0.5f;
+                layout.items.Add(new LayoutItem
+                {
+                    name = name + "_" + (k + 1).ToString(CultureInfo.InvariantCulture),
+                    raw = TrimTo(sentence, 90), kind = kind,
+                    center = new Vector2(centerX + (alongX ? offset * slotW : 0f),
+                                         centerZ + (alongX ? 0f : offset * slotD)),
+                    width = Mathf.Max(2f, slotW), depth = Mathf.Max(2f, slotD),
+                    // width/depth 已是轴对齐尺寸，rotation 再转 90° 会让灰盒/搭建交换宽深并造成重叠。
+                    height = height, rotation = 0f, hasFootprint = true, count = split,
+                    rowId = name, rowIndex = k, rowCount = split,
+                });
+            }
+        }
+
         private static void AddZone(StoryLayout layout, string name, string sentence, float x0, float x1, float z0, float z1)
         {
             // 「广场中心区域(0,-12)至(0,12)」这种是宽带描述，宽为 0 时给 20 米宽度才有意义
@@ -411,6 +803,9 @@ namespace EpicSpark.Story
         private static bool IsUselessName(string name)
         {
             if (string.IsNullOrEmpty(name)) return true;
+            string[] junk = { "出口", "边界", "坐标", "场地边界", "南侧边界", "北侧边界", "西侧出口" };
+            for (int i = 0; i < junk.Length; i++)
+                if (name.IndexOf(junk[i], StringComparison.Ordinal) >= 0) return true;
             for (int i = 0; i < UselessNames.Length; i++)
                 if (string.Equals(name, UselessNames[i], StringComparison.Ordinal)) return true;
             return false;
@@ -494,6 +889,19 @@ namespace EpicSpark.Story
         private static string ClassifyKind(string text)
         {
             if (string.IsNullOrEmpty(text)) return "Decoration";
+
+            // 「门前 5 级石阶」不是一栋楼，别让 GuessBuildingSize 把它猜成 8×4.8 的房子。
+            bool isStep = text.IndexOf("台阶", StringComparison.Ordinal) >= 0
+                          || text.IndexOf("石阶", StringComparison.Ordinal) >= 0;
+            if (isStep)
+            {
+                string[] realBuilding = { "楼", "厅", "堂", "塔", "寺", "院", "殿", "府", "署", "仓", "厂", "店", "铺", "民居", "民宅", "住宅", "城墙", "城门", "门楼" };
+                bool hasReal = false;
+                for (int i = 0; i < realBuilding.Length; i++)
+                    if (text.IndexOf(realBuilding[i], StringComparison.Ordinal) >= 0) { hasReal = true; break; }
+                if (!hasReal) return "Prop";
+            }
+
             for (int i = 0; i < BuildingWords.Length; i++)
                 if (text.IndexOf(BuildingWords[i], StringComparison.Ordinal) >= 0) return "Building";
             for (int i = 0; i < PropWords.Length; i++)
@@ -635,6 +1043,15 @@ namespace EpicSpark.Story
         /// <summary>噪声句：出生点、人物落位、路口相交、边界描述——这些不是可摆放的地标。</summary>
         private static bool IsNoise(string sentence)
         {
+            // 「南侧两栋民宅……中间缺口正对出生点 (0,-24)」同时包含建筑和出生点，
+            // 不能因为出现「出生点」就把整排建筑丢掉。
+            bool hasBuilding = HasBuildingWords(sentence);
+            bool hasFootprint = Footprint.IsMatch(sentence)
+                                || PointPair.Matches(sentence).Count > 0
+                                || (AxisZ.IsMatch(sentence) && (Frontage.IsMatch(sentence) || DepthSize.IsMatch(sentence)))
+                                || (AxisX.IsMatch(sentence) && (Frontage.IsMatch(sentence) || DepthSize.IsMatch(sentence)));
+            if (hasBuilding && hasFootprint) return false;
+
             for (int i = 0; i < NoiseMarkers.Length; i++)
                 if (sentence.IndexOf(NoiseMarkers[i], StringComparison.Ordinal) >= 0) return true;
             return false;
@@ -643,7 +1060,13 @@ namespace EpicSpark.Story
         /// <summary>这句是在描述地面（广场铺装、河堤、草地）还是描述一个实体。</summary>
         private static bool LooksLikeGround(string sentence, string kind)
         {
-            if (kind == "Prop") return false;
+            // 「【地面】中央石板广场：……石板铺地」里的“石板”会先命中 PropWords，
+            // 但带【地面】标签的句子仍然是地面分区，不能变成 60×60 的“石板道具”。
+            bool taggedGround = sentence.IndexOf("【地面】", StringComparison.Ordinal) >= 0;
+            if (kind == "Prop" && !taggedGround) return false;
+            string[] notGround = { "官署", "税署", "台阶", "喷泉", "水槽", "建筑", "小楼", "民居", "酒馆", "店铺", "棚" };
+            for (int i = 0; i < notGround.Length; i++)
+                if (sentence.IndexOf(notGround[i], StringComparison.Ordinal) >= 0) return false;
             for (int i = 0; i < GroundPhrases.Length; i++)
                 if (sentence.IndexOf(GroundPhrases[i], StringComparison.Ordinal) >= 0) return true;
             return false;
